@@ -839,7 +839,7 @@
                             role: 'user',
                             content: [
                                 { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64Image}` } },
-                                { type: 'text', text: '找出图片中所有英文单词和词组（选项A/B/C/D后的词汇），返回JSON数组格式：["word1", "word2", ...]。只返回JSON数组，不要有其他文字。' }
+                                { type: 'text', text: '找出图片中所有英文单词和词组，只要具备动词、形容词、副词词性的词（例如book可以保留，因为它有动词词性。instance需要删除，因为它只有名词词性），不常见的连词也可以保留，返回JSON数组格式：["word1", "word2", ...]。只返回JSON数组，不要有其他文字。' }
                             ]
                         }
                     ],
@@ -1174,6 +1174,7 @@ The experienced professor always encourages his students to ______ new ideas rat
 答案：quickly（形容词→副词，词性转换）
 
 规则：
+- 
 - **词性筛选：名词（n.）绝对不出题，跳过！**
 - 只从动词、形容词、副词中选词
 - 翻译题只涉及单词/词组本身，不要生成完整句子。中译英给出中文词组让用户写英文；英译中给出英文单词让用户写中文意思
@@ -1429,7 +1430,6 @@ The experienced professor always encourages his students to ______ new ideas rat
             
             // 中译英翻译题
             if (quiz.quiz.translation_cn_to_en?.length > 0) {
-                quizContent += `一、中译英（根据中文写出英文单词）\n`;
                 quiz.quiz.translation_cn_to_en.forEach(q => {
                     quizContent += `${questionNum++}. ${q.question}\n`;
                 });
@@ -1438,7 +1438,6 @@ The experienced professor always encourages his students to ______ new ideas rat
             
             // 英译中翻译题
             if (quiz.quiz.translation_en_to_cn?.length > 0) {
-                quizContent += `二、英译中（写出下列单词的中文意思）\n`;
                 quiz.quiz.translation_en_to_cn.forEach(q => {
                     quizContent += `${questionNum++}. ${q.question}\n`;
                 });
@@ -1447,7 +1446,6 @@ The experienced professor always encourages his students to ______ new ideas rat
             
             // 无提示填空
             if (quiz.quiz.no_hint?.length > 0) {
-                quizContent += `三、无提示填空（根据句意填空）\n`;
                 quiz.quiz.no_hint.forEach(q => {
                     quizContent += `${questionNum++}. ${q.question}\n`;
                 });
@@ -1456,7 +1454,6 @@ The experienced professor always encourages his students to ______ new ideas rat
             
             // 原型填空
             if (quiz.quiz.prototype_filling?.length > 0) {
-                quizContent += `四、原型填空（用所给词的原形填空）\n`;
                 quiz.quiz.prototype_filling.forEach(q => {
                     quizContent += `${questionNum++}. ${q.question}\n`;
                 });
@@ -1465,7 +1462,6 @@ The experienced professor always encourages his students to ______ new ideas rat
             
             // 变形填空
             if (quiz.quiz.inflection_filling?.length > 0) {
-                quizContent += `五、变形填空（用所给词的适当形式填空）\n`;
                 quiz.quiz.inflection_filling.forEach(q => {
                     quizContent += `${questionNum++}. ${q.question}\n`;
                 });
@@ -1480,7 +1476,6 @@ The experienced professor always encourages his students to ______ new ideas rat
             
             // 中译英答案
             if (quiz.answer.translation_cn_to_en?.length > 0) {
-                answerContent += `一、中译英\n`;
                 quiz.answer.translation_cn_to_en.forEach(a => {
                     const q = quiz.quiz.translation_cn_to_en?.find(x => x.num === a.num);
                     answerContent += `${answerNum++}. ${q?.question || ''} → ${a.answer}\n`;
@@ -1490,7 +1485,6 @@ The experienced professor always encourages his students to ______ new ideas rat
             
             // 英译中答案
             if (quiz.answer.translation_en_to_cn?.length > 0) {
-                answerContent += `二、英译中\n`;
                 quiz.answer.translation_en_to_cn.forEach(a => {
                     const q = quiz.quiz.translation_en_to_cn?.find(x => x.num === a.num);
                     answerContent += `${answerNum++}. ${q?.question || ''} → ${a.answer}\n`;
@@ -1500,7 +1494,6 @@ The experienced professor always encourages his students to ______ new ideas rat
             
             // 无提示填空答案
             if (quiz.answer.no_hint?.length > 0) {
-                answerContent += `三、无提示填空\n`;
                 quiz.answer.no_hint.forEach(a => {
                     const q = quiz.quiz.no_hint?.find(x => x.num === a.num);
                     answerContent += `${answerNum++}. ${q?.question || ''} → ${a.answer}`;
@@ -1512,7 +1505,6 @@ The experienced professor always encourages his students to ______ new ideas rat
             
             // 原型填空答案
             if (quiz.answer.prototype_filling?.length > 0) {
-                answerContent += `四、原型填空\n`;
                 quiz.answer.prototype_filling.forEach(a => {
                     const q = quiz.quiz.prototype_filling?.find(x => x.num === a.num);
                     answerContent += `${answerNum++}. ${q?.question || ''} → ${a.answer}`;
@@ -1524,7 +1516,6 @@ The experienced professor always encourages his students to ______ new ideas rat
             
             // 变形填空答案
             if (quiz.answer.inflection_filling?.length > 0) {
-                answerContent += `五、变形填空\n`;
                 quiz.answer.inflection_filling.forEach(a => {
                     const q = quiz.quiz.inflection_filling?.find(x => x.num === a.num);
                     answerContent += `${answerNum++}. ${q?.question || ''} → ${a.answer}`;
