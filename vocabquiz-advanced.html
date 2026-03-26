@@ -1062,10 +1062,50 @@
 
 请将每个词汇分类到以下四类之一：
 
-1. **new（生词）**：低频词、高考词汇表外的词汇、学生可能不熟悉的词
-2. **familiar（熟词生义）**：常见词的不常见意思（如 value 作动词"重视"、book 作动词"预订"）
-3. **flexible（词性活用）**：有多种词性，可能需要关注词性转换（如 function n.→v.、present adj./v./n.）
-4. **basic（基础词）**：非常基础的词汇（如 however, therefore, and, but, the, a, an, is, are, have, do, go, come, get, make, take等），这些是功能词或过于简单的词
+## 分类标准（按优先级从高到低）
+
+1. **basic（基础词）**：最常见的前500词汇，包括：
+   - 基础动词：go, come, get, make, take, have, do, say, know, think
+   - 基础形容词：good, bad, big, small, happy, sad, careful, careful, new, old, high, low
+   - 基础副词：very, really, quite, always, often, never, however, therefore, finally
+   - 基础连词：and, but, or, because, although, however, while, if, when
+   - 基础代词/冠词：the, a, an, this, that, I, you, he, she, it, we, they
+   - 判断标准：初中生应该完全掌握的词
+
+2. **familiar（熟词生义）**：常见词但不常见的意思或用法
+   - 常见名词作动词：value（重视）、book（预订）、position（定位）、voice（表达）
+   - 常见形容词的特殊含义：fair（公平的/晴朗的）、sharp（锋利的/急剧的）
+   - 常见动词的短语用法：make out（辨认）、give in（屈服）
+   - 判断标准：词本身常见，但在此语境下有特殊含义
+
+3. **flexible（词性活用）**：有多种词性且需要关注转换
+   - 名动转换：function(n./v.)、present(adj./v./n.)、increase(n./v.)
+   - 形动转换：diverse(adj.)→diversity(n.)、beautiful(adj.)→beautify(v.)
+   - 形副转换：quick(adj.)→quickly(adv.)、possible(adj.)→possibly(adv.)
+   - 判断标准：词性转换是考点，需要特别练习
+
+4. **new（生词）**：高考词汇表外、低频词、学生可能不熟悉的词
+   - 不常见的动词：interpret, contemplate, scrutinize, endeavor
+   - 不常见的形容词：ambiguous, meticulous, pragmatic, ubiquitous
+   - 学术/书面词汇：phenomenon, hypothesis, infrastructure
+   - 判断标准：高中生可能不认识或不熟悉的词
+
+## 示例参考
+- careful → basic（基础形容词，"小心的"）
+- however → basic（基础连词，"然而"）
+- value → familiar（熟词生义：作动词"重视"，常见词不常见意思）
+- interpret → new（生词：不常见，"解释/口译"）
+- function → flexible（词性活用：n.功能 → v.起作用）
+- respect → flexible（词性活用：v.尊敬 → n.尊重）
+- book → familiar（熟词生义：常见名词作动词"预订"）
+- position → familiar（熟词生义：常见名词作动词"定位/安置"）
+
+## 重要原则
+- **不要为了填满分类而随意分配**
+- **大多数常见词应该分到 basic**，如：happy, go, come, make, take
+- **只有真正低频/不熟悉的词才分到 new**
+- **熟词生义必须真的是常见词的特殊用法**
+- 每个词汇必须且只能属于一个分类
 
 返回JSON格式：
 {
@@ -1074,12 +1114,6 @@
   "flexible": ["词汇5", "词汇6"],
   "basic": ["词汇7", "词汇8"]
 }
-
-规则：
-- 每个词汇必须且只能属于一个分类
-- 确保分类准确，生词应该是学生可能不认识或不熟悉的
-- 熟词生义必须是常见词但在此语境下有特殊含义
-- 基础词应该极少出现在题目中
 
 只返回JSON，不要有其他文字。`;
 
@@ -1109,7 +1143,7 @@
             const content = data.choices[0].message.content;
             
             try {
-                const match = content.match(/\{\s\S]*\}/);
+                const match = content.match(/\{[\s\S]*\}/);
                 if (match) {
                     const result = JSON.parse(match[0]);
                     // 确保四个分类都存在
@@ -1449,7 +1483,7 @@ The experienced professor always encourages his students to ______ new ideas rat
             
             // 方法1: 尝试直接提取和解析 JSON
             try {
-                const match = content.match(/\{\s\S]*\}/);
+                const match = content.match(/\{[\s\S]*\}/);
                 if (match) {
                     quiz = JSON.parse(match[0]);
                 }
@@ -1483,7 +1517,7 @@ The experienced professor always encourages his students to ______ new ideas rat
                     // 移除任何尾随逗号
                     fixedContent = fixedContent.replace(/,(\s*[}\]])/g, '$1');
                     
-                    const match = fixedContent.match(/\{\s\S]*\}/);
+                    const match = fixedContent.match(/\{[\s\S]*\}/);
                     if (match) {
                         quiz = JSON.parse(match[0]);
                         console.log('容错解析成功');
