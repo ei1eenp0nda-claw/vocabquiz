@@ -1031,7 +1031,7 @@
 
             const data = await response.json();
             const content = data.choices[0].message.content;
-            const match = content.match(/\[\s\S]*?\]/);
+            const match = content.match(/\[[\s\S]*?\]/);
             if (match) return JSON.parse(match[0]);
             throw new Error('无法解析词汇列表');
         }
