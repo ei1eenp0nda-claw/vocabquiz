@@ -632,43 +632,77 @@
 难度：${difficultyDesc}
 
 题目数量动态分配（共${totalCount}题）：
-1. 中译英翻译题：${cnToEnCount}道（给出中文，要求写出英文）
-2. 英译中翻译题：${enToCnCount}道（给出英文，要求写出中文意思）
+1. 中译英翻译题：${cnToEnCount}道（给出包含该词汇的中文句子，让用户翻译成英文）
+2. 英译中翻译题：${enToCnCount}道（给出包含该词汇的英文句子，让用户翻译成中文）
 3. 无提示填空：${noHintCount}道（固定搭配，无括号提示词）
 4. 原型填空：${prototypeCount}道（填原形，作为送分题）
 5. 变形填空：${inflectionCount}道（用括号词的适当形式填空，考察变形）
 
-好示例（变形填空）：
-- The weather is getting ______ (bad). → worse（比较级）
-- She ______ (go) to school yesterday. → went（过去式）
-- This is a ______ (beauty) flower. → beautiful（词性转换）
+【重要示例】
+
+翻译题（中译英）：给出一个包含该词汇的中文句子，让用户翻译成英文
+示例词汇：diverse
+题目：这个城市有着______的文化。（diverse）
+答案：diverse
+
+翻译题（英译中）：给出一个包含该词汇的英文句子，让用户翻译成中文
+示例词汇：diverse
+题目：The city has a ______ culture.（diverse）
+答案：diverse
+
+变形填空示例：生成完整句子，包含空格和括号提示词
+示例词汇：diverse
+题目：The city has a ______ range of cultures. (diverse)
+答案：diverse（原形）
+
+示例词汇：resemble
+题目：She ______ her mother in many ways. (resemble)
+答案：resembles（第三人称单数）
+
+示例词汇：bad
+题目：The weather is getting ______. (bad)
+答案：worse（比较级）
+
+示例词汇：go
+题目：She ______ to school yesterday. (go)
+答案：went（过去式）
+
+示例词汇：beauty
+题目：This is a ______ flower. (beauty)
+答案：beautiful（词性转换）
 
 规则：
+- 翻译题必须给出包含该词汇的完整句子（不是只翻译单词本身）
+- 填空题（包括原型填空和变形填空）必须生成完整句子，包含______和括号提示词，禁止"句子______填空"这种占位符
 - 变形填空必须考察变形：时态/语态/比较级/非谓语/词性转换
 - 确保每道题使用不同的词汇
 - 句子难度符合${difficultyDesc}水平
 
 【重要】必须返回标准JSON格式，严格要求如下：
 1. num字段必须是阿拉伯数字（1, 2, 3...），禁止中文数字（如一、二、三、第十题等）
-2. JSON示例：
+2. question字段必须是完整句子，禁止"句子______填空"这种占位符格式
+3. JSON示例：
 {
   "quiz": {
-    "translation_cn_to_en": [{"num": 1, "question": "中文意思", "type": "中译英"}],
-    "translation_en_to_cn": [{"num": 2, "question": "英文单词", "type": "英译中"}],
-    "no_hint": [{"num": 3, "question": "句子______填空"}],
-    "prototype_filling": [{"num": 4, "question": "句子______填空 (提示词)"}],
-    "inflection_filling": [{"num": 5, "question": "句子______填空 (提示词)"}]
+    "translation_cn_to_en": [{"num": 1, "question": "这个城市有着______的文化。（diverse）", "type": "中译英"}],
+    "translation_en_to_cn": [{"num": 2, "question": "The city has a ______ culture.（diverse）", "type": "英译中"}],
+    "no_hint": [{"num": 3, "question": "She is ______ in playing the piano."}],
+    "prototype_filling": [{"num": 4, "question": "We should ______ our parents. (respect)"}],
+    "inflection_filling": [{"num": 5, "question": "She ______ her mother in many ways. (resemble)"}]
   },
   "answer": {
-    "translation_cn_to_en": [{"num": 1, "answer": "英文单词"}],
-    "translation_en_to_cn": [{"num": 2, "answer": "中文意思"}],
-    "no_hint": [{"num": 3, "answer": "答案", "explanation": "解析"}],
-    "prototype_filling": [{"num": 4, "answer": "原形答案", "explanation": "解析"}],
-    "inflection_filling": [{"num": 5, "answer": "变形后答案", "explanation": "解析"}]
+    "translation_cn_to_en": [{"num": 1, "answer": "diverse"}],
+    "translation_en_to_cn": [{"num": 2, "answer": "多元的"}],
+    "no_hint": [{"num": 3, "answer": "gifted", "explanation": "固定搭配 be gifted in 在某方面有天赋"}],
+    "prototype_filling": [{"num": 4, "answer": "respect", "explanation": "原形"}],
+    "inflection_filling": [{"num": 5, "answer": "resembles", "explanation": "第三人称单数"}]
   }
 }
 
-再次强调：num必须是阿拉伯数字1-${totalCount}，绝对禁止使用"第一题"、"第十题"等中文数字！
+再次强调：
+- num必须是阿拉伯数字1-${totalCount}，绝对禁止使用"第一题"、"第十题"等中文数字！
+- question字段必须是完整句子，禁止使用"句子______填空"占位符！
+- 翻译题必须基于包含该词汇的完整句子！
 
 只返回JSON，不要有任何其他文字。`;
 
