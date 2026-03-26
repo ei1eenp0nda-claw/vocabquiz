@@ -632,23 +632,23 @@
 难度：${difficultyDesc}
 
 题目数量动态分配（共${totalCount}题）：
-1. 中译英翻译题：${cnToEnCount}道（给出包含该词汇的中文句子，让用户翻译成英文）
-2. 英译中翻译题：${enToCnCount}道（给出包含该词汇的英文句子，让用户翻译成中文）
+1. 中译英翻译题：${cnToEnCount}道（给出中文词组，让用户写英文单词）
+2. 英译中翻译题：${enToCnCount}道（给出英文单词，让用户写中文意思）
 3. 无提示填空：${noHintCount}道（固定搭配，无括号提示词）
 4. 原型填空：${prototypeCount}道（填原形，作为送分题）
 5. 变形填空：${inflectionCount}道（用括号词的适当形式填空，考察变形）
 
 【重要示例】
 
-翻译题（中译英）：给出一个包含该词汇的中文句子，让用户翻译成英文
+翻译题（中译英）：直接给出中文词组，让用户写出对应的英文单词
 示例词汇：diverse
-题目：这个城市有着______的文化。（diverse）
+题目：多样的
 答案：diverse
 
-翻译题（英译中）：给出一个包含该词汇的英文句子，让用户翻译成中文
+翻译题（英译中）：直接给出英文单词，让用户写出对应的中文意思
 示例词汇：diverse
-题目：The city has a ______ culture.（diverse）
-答案：diverse
+题目：diverse
+答案：多样的/多元的
 
 变形填空示例：生成完整句子，包含空格和括号提示词
 示例词汇：diverse
@@ -672,7 +672,7 @@
 答案：beautiful（词性转换）
 
 规则：
-- 翻译题必须给出包含该词汇的完整句子（不是只翻译单词本身）
+- 翻译题只涉及单词/词组本身，不要生成完整句子。中译英给出中文词组让用户写英文；英译中给出英文单词让用户写中文意思
 - 填空题（包括原型填空和变形填空）必须生成完整句子，包含______和括号提示词，禁止"句子______填空"这种占位符
 - 变形填空必须考察变形：时态/语态/比较级/非谓语/词性转换
 - 确保每道题使用不同的词汇
@@ -684,15 +684,15 @@
 3. JSON示例：
 {
   "quiz": {
-    "translation_cn_to_en": [{"num": 1, "question": "这个城市有着______的文化。（diverse）", "type": "中译英"}],
-    "translation_en_to_cn": [{"num": 2, "question": "The city has a ______ culture.（diverse）", "type": "英译中"}],
+    "translation_cn_to_en": [{"num": 1, "question": "多样的", "type": "中译英"}],
+    "translation_en_to_cn": [{"num": 2, "question": "diverse", "type": "英译中"}],
     "no_hint": [{"num": 3, "question": "She is ______ in playing the piano."}],
     "prototype_filling": [{"num": 4, "question": "We should ______ our parents. (respect)"}],
     "inflection_filling": [{"num": 5, "question": "She ______ her mother in many ways. (resemble)"}]
   },
   "answer": {
     "translation_cn_to_en": [{"num": 1, "answer": "diverse"}],
-    "translation_en_to_cn": [{"num": 2, "answer": "多元的"}],
+    "translation_en_to_cn": [{"num": 2, "answer": "多样的/多元的"}],
     "no_hint": [{"num": 3, "answer": "gifted", "explanation": "固定搭配 be gifted in 在某方面有天赋"}],
     "prototype_filling": [{"num": 4, "answer": "respect", "explanation": "原形"}],
     "inflection_filling": [{"num": 5, "answer": "resembles", "explanation": "第三人称单数"}]
@@ -701,8 +701,8 @@
 
 再次强调：
 - num必须是阿拉伯数字1-${totalCount}，绝对禁止使用"第一题"、"第十题"等中文数字！
-- question字段必须是完整句子，禁止使用"句子______填空"占位符！
-- 翻译题必须基于包含该词汇的完整句子！
+- 填空题的question字段必须是完整句子，禁止使用"句子______填空"占位符！
+- 翻译题只需给出单词/词组本身，不要完整句子！
 
 只返回JSON，不要有任何其他文字。`;
 
