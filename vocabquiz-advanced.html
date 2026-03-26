@@ -691,7 +691,7 @@
             
             try {
                 const base64Image = await fileToBase64(currentImage);
-                const vocab = await extractVocab(base64Image, apiKey);
+                const vocab = await extractVocab(base64Image, apiKey, currentImage.type);
                 
                 extractedVocab = vocab;
                 renderVocabList();
@@ -833,7 +833,7 @@
             });
         }
 
-        async function extractVocab(base64Image, apiKey) {
+        async function extractVocab(base64Image, apiKey, mimeType) {
             const cleanApiKey = apiKey.replace(/[^\x00-\x7F]/g, '').trim();
             const response = await fetch('https://ark.cn-beijing.volces.com/api/v3/chat/completions', {
                 method: 'POST',
@@ -844,10 +844,10 @@
                 body: JSON.stringify({
                     model: document.getElementById('visionModel').value,
                     messages: [
-                        { role: 'system', content: '你是一个OCR识别专家，专门识别图片中加粗的英文词汇。' },
+                        { role: 'system', content: '你是一个OCR识别专家，专门识别图片中的英文词汇。' },
                         { role: 'user', content: [
-                            { type: 'text', text: '找出图片中所有加粗的英文单词和词组，返回JSON数组格式：["word1", "word2", ...]。只返回JSON数组，不要有其他文字。' },
-                            { type: 'image_url', image_url: { url: `data:image/png;base64,${base64Image}` } }
+                            { type: 'text', text: '找出图片中所有英文单词和词组（选项A/B/C/D后的词汇），返回JSON数组格式：["word1", "word2", ...]。只返回JSON数组，不要有其他文字。' },
+                            { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64Image}` } }
                         ]}
                     ],
                     temperature: 0.1
