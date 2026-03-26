@@ -1,0 +1,15 @@
+# VocabQuiz Backend Dependencies
+
+# Flask框架
+Flask>=2.3.0
+Flask-CORS>=4.0.0
+Werkzeug>=2.3.0
+
+# Kimi API客户端
+openai>=1.0.0
+
+# 工具库
+python-dotenv>=1.0.0
+
+# 生产环境（可选）
+# gunicorn>=21.0.0
