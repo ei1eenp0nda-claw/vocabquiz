@@ -631,6 +631,15 @@
             const prompt = `基于以下${vocabCount}个词汇出英语练习题：${vocabStr}
 难度：${difficultyDesc}
 
+【词性筛选规则 - 非常重要】
+1. 首先识别每个词汇的词性
+2. **如果是名词（n.），绝对跳过，不要出题** 
+3. **只从以下词性中选词出题：**
+   - 动词（v.）
+   - 形容词（adj.）
+   - 副词（adv.）
+4. 如果词汇表中的词大部分是名词，请优先选择其中的动词、形容词、副词出题
+
 题目数量动态分配（共${totalCount}题）：
 1. 中译英翻译题：${cnToEnCount}道（给出中文词组，让用户写英文单词）
 2. 英译中翻译题：${enToCnCount}道（给出英文单词，让用户写中文意思）
@@ -641,40 +650,57 @@
 【重要示例】
 
 翻译题（中译英）：直接给出中文词组，让用户写出对应的英文单词
-示例词汇：diverse
+示例词汇：diverse（形容词）
 题目：多样的
 答案：diverse
 
 翻译题（英译中）：直接给出英文单词，让用户写出对应的中文意思
-示例词汇：diverse
+示例词汇：diverse（形容词）
 题目：diverse
 答案：多样的/多元的
 
-变形填空示例：生成完整句子，包含空格和括号提示词
-示例词汇：diverse
-题目：The city has a ______ range of cultures. (diverse)
-答案：diverse（原形）
+原型填空示例（填原形，送分题）：
+示例词汇：respect（动词）
+题目：We should ______ our parents. (respect)
+答案：respect（原形）
 
-示例词汇：resemble
+变形填空示例（必须真正变形，不是填原形）：
+
+示例词汇：resemble（动词）
 题目：She ______ her mother in many ways. (resemble)
 答案：resembles（第三人称单数）
 
-示例词汇：bad
+示例词汇：respect（动词）
+题目：We should show more ______ for elders. (respect)
+答案：respect（动词→名词，词性转换）
+
+示例词汇：bad（形容词）
 题目：The weather is getting ______. (bad)
 答案：worse（比较级）
 
-示例词汇：go
+示例词汇：go（动词）
 题目：She ______ to school yesterday. (go)
 答案：went（过去式）
 
-示例词汇：beauty
-题目：This is a ______ flower. (beauty)
-答案：beautiful（词性转换）
+示例词汇：diverse（形容词）
+题目：The city is known for its cultural ______. (diverse)
+答案：diversity（形容词→名词，词性转换）
+
+示例词汇：beautiful（形容词）
+题目：We should ______ our hometown. (beautiful)
+答案：beautify（形容词→动词，词性转换）
+
+示例词汇：quick（形容词）
+题目：He finished the work ______. (quick)
+答案：quickly（形容词→副词，词性转换）
 
 规则：
+- **词性筛选：名词（n.）绝对不出题，跳过！**
+- 只从动词、形容词、副词中选词
 - 翻译题只涉及单词/词组本身，不要生成完整句子。中译英给出中文词组让用户写英文；英译中给出英文单词让用户写中文意思
 - 填空题（包括原型填空和变形填空）必须生成完整句子，包含______和括号提示词，禁止"句子______填空"这种占位符
-- 变形填空必须考察变形：时态/语态/比较级/非谓语/词性转换
+- **变形填空必须考察真正的变形**：时态变化/第三人称单数/比较级最高级/非谓语动词/词性转换（形容词↔名词↔动词↔副词）
+- **变形填空不能只是填原形**，必须涉及某种词形变化
 - 确保每道题使用不同的词汇
 - 句子难度符合${difficultyDesc}水平
 
@@ -700,6 +726,8 @@
 }
 
 再次强调：
+- **名词（n.）绝对不出题，跳过！**
+- **变形填空必须真正变形，不能填原形！**
 - num必须是阿拉伯数字1-${totalCount}，绝对禁止使用"第一题"、"第十题"等中文数字！
 - 填空题的question字段必须是完整句子，禁止使用"句子______填空"占位符！
 - 翻译题只需给出单词/词组本身，不要完整句子！
