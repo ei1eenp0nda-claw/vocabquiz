@@ -60,12 +60,66 @@
             color: #999;
             font-size: 13px;
         }
-        .preview-image {
-            max-width: 100%;
-            max-height: 300px;
+        /* 图片缩略图网格 */
+        .images-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 12px;
+            margin-top: 20px;
+        }
+        .image-thumbnail {
+            position: relative;
+            aspect-ratio: 1;
             border-radius: 8px;
+            overflow: hidden;
+            border: 2px solid #e0e0e0;
+            transition: all 0.2s;
+        }
+        .image-thumbnail:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .image-thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .delete-btn {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: rgba(220, 38, 38, 0.9);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            opacity: 0;
+        }
+        .image-thumbnail:hover .delete-btn {
+            opacity: 1;
+        }
+        .delete-btn:hover {
+            background: #dc2626;
+            transform: scale(1.1);
+        }
+        .images-count {
+            text-align: center;
+            color: #667eea;
+            font-weight: 600;
+            font-size: 14px;
             margin-top: 15px;
-            display: none;
+            padding: 8px;
+            background: #f0f4ff;
+            border-radius: 8px;
         }
         .config-section {
             display: grid;
@@ -135,12 +189,18 @@
             padding: 6px 12px;
             font-size: 13px;
         }
+        .btn-success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+        .btn-success:hover {
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
         .actions {
             display: flex;
             gap: 10px;
             justify-content: center;
             flex-wrap: wrap;
-            margin-top: 15px;
+            margin-top: 20px;
         }
         .loading {
             display: none;
@@ -505,16 +565,20 @@
             <div class="upload-area" id="uploadArea">
                 <div class="upload-icon">📋</div>
                 <div class="upload-text">粘贴或点击上传图片</div>
-                <div class="upload-hint">支持 Ctrl+V 粘贴截图，或拖拽图片到此处</div>
-                <input type="file" id="fileInput" accept="image/*" style="display: none;">
+                <div class="upload-hint">支持 Ctrl+V 粘贴截图，或拖拽图片到此处<br>可上传多张图片</div>
+                <input type="file" id="fileInput" accept="image/*" multiple style="display: none;">
             </div>
-            <img id="previewImage" class="preview-image" alt="预览">
+            
+            <!-- 图片缩略图网格 -->
+            <div id="imagesGrid" class="images-grid hidden"></div>
+            <div id="imagesCount" class="images-count hidden"></div>
+            
             <div id="uploadError" class="error"></div>
             <div id="uploadSuccess" class="success"></div>
             
             <div class="actions">
-                <button class="btn" id="extractBtn" disabled>🔍 提取词汇</button>
-                <button class="btn btn-secondary hidden" id="resetBtn">🔄 重新上传</button>
+                <button class="btn btn-secondary" id="clearAllBtn" disabled>🗑️ 清空全部</button>
+                <button class="btn btn-success" id="extractBtn" disabled>🔍 提取词汇</button>
             </div>
         </div>
 
@@ -586,7 +650,8 @@
     </div>
 
     <script>
-        let currentImage = null;
+        // 存储所有上传的图片
+        let uploadedImages = [];
         let extractedVocab = [];
         let filteredVocab = {
             new: [],
@@ -599,9 +664,10 @@
 
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('fileInput');
-        const previewImage = document.getElementById('previewImage');
+        const imagesGrid = document.getElementById('imagesGrid');
+        const imagesCount = document.getElementById('imagesCount');
         const extractBtn = document.getElementById('extractBtn');
-        const resetBtn = document.getElementById('resetBtn');
+        const clearAllBtn = document.getElementById('clearAllBtn');
         const vocabCard = document.getElementById('vocabCard');
         const vocabList = document.getElementById('vocabList');
         const addVocabInput = document.getElementById('addVocabInput');
@@ -613,12 +679,17 @@
         const loading = document.getElementById('loading');
         const loadingText = document.getElementById('loadingText');
 
+        // 上传区域点击事件
         uploadArea.addEventListener('click', () => fileInput.click());
         
+        // 文件选择事件 - 支持多选
         fileInput.addEventListener('change', (e) => {
-            if (e.target.files[0]) handleImage(e.target.files[0]);
+            if (e.target.files.length > 0) {
+                handleMultipleImages(Array.from(e.target.files));
+            }
         });
 
+        // 拖拽事件
         uploadArea.addEventListener('dragover', (e) => {
             e.preventDefault();
             uploadArea.classList.add('dragover');
@@ -631,45 +702,102 @@
         uploadArea.addEventListener('drop', (e) => {
             e.preventDefault();
             uploadArea.classList.remove('dragover');
-            const file = e.dataTransfer.files[0];
-            if (file?.type.startsWith('image/')) handleImage(file);
+            const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+            if (files.length > 0) handleMultipleImages(files);
         });
 
+        // 粘贴事件 - 支持多图粘贴（浏览器通常一次只能粘贴一张）
         document.addEventListener('paste', (e) => {
             const items = e.clipboardData.items;
+            const imageFiles = [];
             for (let item of items) {
                 if (item.type.startsWith('image/')) {
-                    handleImage(item.getAsFile());
-                    uploadArea.classList.add('pasted');
-                    setTimeout(() => uploadArea.classList.remove('pasted'), 800);
-                    break;
+                    imageFiles.push(item.getAsFile());
                 }
+            }
+            if (imageFiles.length > 0) {
+                handleMultipleImages(imageFiles);
+                uploadArea.classList.add('pasted');
+                setTimeout(() => uploadArea.classList.remove('pasted'), 800);
             }
         });
 
-        function handleImage(file) {
-            currentImage = file;
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                previewImage.src = e.target.result;
-                previewImage.style.display = 'block';
-                extractBtn.disabled = false;
-                resetBtn.classList.remove('hidden');
-                showSuccess('uploadSuccess', '图片已加载');
-            };
-            reader.readAsDataURL(file);
+        // 处理多张图片
+        function handleMultipleImages(files) {
+            const validFiles = files.filter(file => file.type.startsWith('image/'));
+            if (validFiles.length === 0) return;
+
+            validFiles.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    uploadedImages.push({
+                        file: file,
+                        dataUrl: e.target.result,
+                        id: Date.now() + Math.random().toString(36).substr(2, 9)
+                    });
+                    updateImagesDisplay();
+                };
+                reader.readAsDataURL(file);
+            });
+
+            showSuccess('uploadSuccess', `已添加 ${validFiles.length} 张图片`);
+            setTimeout(() => hideSuccess('uploadSuccess'), 2000);
         }
 
-        resetBtn.addEventListener('click', () => {
-            currentImage = null;
-            previewImage.src = '';
-            previewImage.style.display = 'none';
-            extractBtn.disabled = true;
-            resetBtn.classList.add('hidden');
-            hideError('uploadError');
-            hideSuccess('uploadSuccess');
+        // 更新图片显示
+        function updateImagesDisplay() {
+            if (uploadedImages.length === 0) {
+                imagesGrid.classList.add('hidden');
+                imagesCount.classList.add('hidden');
+                extractBtn.disabled = true;
+                clearAllBtn.disabled = true;
+                return;
+            }
+
+            imagesGrid.classList.remove('hidden');
+            imagesCount.classList.remove('hidden');
+            extractBtn.disabled = false;
+            clearAllBtn.disabled = false;
+
+            // 渲染缩略图
+            imagesGrid.innerHTML = uploadedImages.map((img, index) => `
+                <div class="image-thumbnail" data-id="${img.id}">
+                    <img src="${img.dataUrl}" alt="图片 ${index + 1}">
+                    <button class="delete-btn" onclick="deleteImage('${img.id}')" title="删除">×</button>
+                </div>
+            `).join('');
+
+            // 更新数量显示
+            imagesCount.textContent = `共 ${uploadedImages.length} 张图片`;
+        }
+
+        // 删除单张图片
+        window.deleteImage = function(id) {
+            uploadedImages = uploadedImages.filter(img => img.id !== id);
+            updateImagesDisplay();
+            
+            if (uploadedImages.length === 0) {
+                // 清空词汇结果
+                extractedVocab = [];
+                vocabCard.classList.add('hidden');
+                updateStep(1);
+            }
+        };
+
+        // 清空所有图片
+        clearAllBtn.addEventListener('click', () => {
+            if (confirm('确定要清空所有图片吗？')) {
+                uploadedImages = [];
+                extractedVocab = [];
+                updateImagesDisplay();
+                vocabCard.classList.add('hidden');
+                updateStep(1);
+                hideError('uploadError');
+                hideSuccess('uploadSuccess');
+            }
         });
 
+        // 提取词汇按钮
         extractBtn.addEventListener('click', async () => {
             const apiKey = document.getElementById('apiKey').value.trim();
             if (!apiKey) {
@@ -677,18 +805,40 @@
                 return;
             }
 
-            showLoading('正在识别图片中的词汇...');
+            if (uploadedImages.length === 0) {
+                showError('uploadError', '请先上传图片');
+                return;
+            }
+
+            showLoading(`正在识别 ${uploadedImages.length} 张图片中的词汇...`);
+            hideError('uploadError');
             
             try {
-                const base64Image = await fileToBase64(currentImage);
-                const vocab = await extractVocab(base64Image, apiKey, currentImage.type);
+                // 存储所有识别结果
+                const allVocabResults = [];
                 
-                extractedVocab = vocab;
+                // 遍历所有图片进行OCR
+                for (let i = 0; i < uploadedImages.length; i++) {
+                    const img = uploadedImages[i];
+                    loadingText.textContent = `正在识别第 ${i + 1}/${uploadedImages.length} 张图片...`;
+                    
+                    const base64Image = await fileToBase64(img.file);
+                    const vocab = await extractVocab(base64Image, apiKey, img.file.type);
+                    allVocabResults.push(...vocab);
+                }
+                
+                // 合并并去重
+                const mergedVocab = mergeAndDeduplicate(allVocabResults);
+                
+                extractedVocab = mergedVocab;
                 renderVocabList();
                 
                 vocabCard.classList.remove('hidden');
                 updateStep(2);
                 vocabCard.scrollIntoView({ behavior: 'smooth' });
+                
+                showSuccess('uploadSuccess', `成功识别 ${extractedVocab.length} 个不重复词汇`);
+                setTimeout(() => hideSuccess('uploadSuccess'), 3000);
             } catch (err) {
                 showError('uploadError', err.message);
             } finally {
@@ -696,24 +846,51 @@
             }
         });
 
+        // 合并并去重词汇
+        function mergeAndDeduplicate(vocabArray) {
+            // 使用 Map 来去重，保持大小写不敏感
+            const vocabMap = new Map();
+            
+            vocabArray.forEach(word => {
+                const lowerWord = word.toLowerCase().trim();
+                // 如果已存在，保留首字母大写的版本（如果有的话）
+                if (vocabMap.has(lowerWord)) {
+                    const existing = vocabMap.get(lowerWord);
+                    // 优先保留长度较短的（原词）或首字母大写的
+                    if (word.length <= existing.length || /^[A-Z]/.test(word)) {
+                        vocabMap.set(lowerWord, word);
+                    }
+                } else {
+                    vocabMap.set(lowerWord, word);
+                }
+            });
+            
+            // 返回去重后的数组
+            return Array.from(vocabMap.values());
+        }
+
         // 添加词汇
         function addVocab(word) {
             word = word.trim();
             if (!word) return;
-            if (extractedVocab.includes(word)) {
+            
+            // 检查是否已存在（大小写不敏感）
+            const exists = extractedVocab.some(v => v.toLowerCase() === word.toLowerCase());
+            if (exists) {
                 alert('该词汇已存在');
                 return;
             }
+            
             extractedVocab.push(word);
             renderVocabList();
             addVocabInput.value = '';
         }
 
         // 删除词汇
-        function removeVocab(index) {
+        window.removeVocab = function(index) {
             extractedVocab.splice(index, 1);
             renderVocabList();
-        }
+        };
 
         addVocabBtn.addEventListener('click', () => {
             addVocab(addVocabInput.value);
@@ -854,9 +1031,28 @@
 
             const data = await response.json();
             const content = data.choices[0].message.content;
-            const match = content.match(/\[[\s\S]*?\]/);
+            const match = content.match(/\[\s\S]*?\]/);
             if (match) return JSON.parse(match[0]);
             throw new Error('无法解析词汇列表');
+        }
+
+        // 去重：确保每个词只出现在一个分类中
+        // 优先级：new > familiar > flexible > basic
+        function deduplicateFilterResults(result) {
+            const seen = new Set();
+            const deduped = { new: [], familiar: [], flexible: [], basic: [] };
+            
+            // 按优先级遍历
+            ['new', 'familiar', 'flexible', 'basic'].forEach(category => {
+                result[category].forEach(word => {
+                    if (!seen.has(word.toLowerCase())) {
+                        seen.add(word.toLowerCase());
+                        deduped[category].push(word);
+                    }
+                });
+            });
+            
+            return deduped;
         }
 
         // 智能筛选词汇
@@ -913,27 +1109,31 @@
             const content = data.choices[0].message.content;
             
             try {
-                const match = content.match(/\{[\s\S]*\}/);
+                const match = content.match(/\{\s\S]*\}/);
                 if (match) {
                     const result = JSON.parse(match[0]);
                     // 确保四个分类都存在
-                    return {
+                    const categorized = {
                         new: result.new || [],
                         familiar: result.familiar || [],
                         flexible: result.flexible || [],
                         basic: result.basic || []
                     };
+                    // 去重：确保每个词只出现在一个分类中
+                    return deduplicateFilterResults(categorized);
                 }
                 throw new Error('无法解析筛选结果');
             } catch (err) {
                 console.error('解析筛选结果失败:', err, content);
                 // 如果解析失败，返回默认分类（所有词都作为生词）
-                return {
+                const fallback = {
                     new: vocabList,
                     familiar: [],
                     flexible: [],
                     basic: []
                 };
+                // 去重：确保每个词只出现在一个分类中
+                return deduplicateFilterResults(fallback);
             }
         }
 
@@ -1249,7 +1449,7 @@ The experienced professor always encourages his students to ______ new ideas rat
             
             // 方法1: 尝试直接提取和解析 JSON
             try {
-                const match = content.match(/\{[\s\S]*\}/);
+                const match = content.match(/\{\s\S]*\}/);
                 if (match) {
                     quiz = JSON.parse(match[0]);
                 }
@@ -1283,7 +1483,7 @@ The experienced professor always encourages his students to ______ new ideas rat
                     // 移除任何尾随逗号
                     fixedContent = fixedContent.replace(/,(\s*[}\]])/g, '$1');
                     
-                    const match = fixedContent.match(/\{[\s\S]*\}/);
+                    const match = fixedContent.match(/\{\s\S]*\}/);
                     if (match) {
                         quiz = JSON.parse(match[0]);
                         console.log('容错解析成功');
@@ -1423,54 +1623,52 @@ The experienced professor always encourages his students to ______ new ideas rat
         }
 
         function renderQuiz(quiz) {
-            let questionNum = 1;
-            // 生成纯文本题目
+            // 生成纯文本题目 - 只保留主标题，去掉所有分类标题和编号
             let quizContent = `英语练习题\n`;
             quizContent += `==============\n\n`;
             
             // 中译英翻译题
             if (quiz.quiz.translation_cn_to_en?.length > 0) {
                 quiz.quiz.translation_cn_to_en.forEach(q => {
-                    quizContent += `${questionNum++}. ${q.question}\n`;
+                    quizContent += `${q.question}\n`;
                 });
                 quizContent += `\n`;
             }
-            
+
             // 英译中翻译题
             if (quiz.quiz.translation_en_to_cn?.length > 0) {
                 quiz.quiz.translation_en_to_cn.forEach(q => {
-                    quizContent += `${questionNum++}. ${q.question}\n`;
+                    quizContent += `${q.question}\n`;
                 });
                 quizContent += `\n`;
             }
-            
+
             // 无提示填空
             if (quiz.quiz.no_hint?.length > 0) {
                 quiz.quiz.no_hint.forEach(q => {
-                    quizContent += `${questionNum++}. ${q.question}\n`;
+                    quizContent += `${q.question}\n`;
                 });
                 quizContent += `\n`;
             }
-            
+
             // 原型填空
             if (quiz.quiz.prototype_filling?.length > 0) {
                 quiz.quiz.prototype_filling.forEach(q => {
-                    quizContent += `${questionNum++}. ${q.question}\n`;
+                    quizContent += `${q.question}\n`;
                 });
                 quizContent += `\n`;
             }
-            
+
             // 变形填空
             if (quiz.quiz.inflection_filling?.length > 0) {
                 quiz.quiz.inflection_filling.forEach(q => {
-                    quizContent += `${questionNum++}. ${q.question}\n`;
+                    quizContent += `${q.question}\n`;
                 });
             }
             
             quizText.value = quizContent;
-            
-            // 生成纯文本答案
-            let answerNum = 1;
+
+            // 生成纯文本答案 - 只保留主标题，去掉所有分类标题
             let answerContent = `参考答案\n`;
             answerContent += `==============\n\n`;
             
@@ -1478,47 +1676,47 @@ The experienced professor always encourages his students to ______ new ideas rat
             if (quiz.answer.translation_cn_to_en?.length > 0) {
                 quiz.answer.translation_cn_to_en.forEach(a => {
                     const q = quiz.quiz.translation_cn_to_en?.find(x => x.num === a.num);
-                    answerContent += `${answerNum++}. ${q?.question || ''} → ${a.answer}\n`;
+                    answerContent += `${q?.question || ''} → ${a.answer}\n`;
                 });
                 answerContent += `\n`;
             }
-            
+
             // 英译中答案
             if (quiz.answer.translation_en_to_cn?.length > 0) {
                 quiz.answer.translation_en_to_cn.forEach(a => {
                     const q = quiz.quiz.translation_en_to_cn?.find(x => x.num === a.num);
-                    answerContent += `${answerNum++}. ${q?.question || ''} → ${a.answer}\n`;
+                    answerContent += `${q?.question || ''} → ${a.answer}\n`;
                 });
                 answerContent += `\n`;
             }
-            
+
             // 无提示填空答案
             if (quiz.answer.no_hint?.length > 0) {
                 quiz.answer.no_hint.forEach(a => {
                     const q = quiz.quiz.no_hint?.find(x => x.num === a.num);
-                    answerContent += `${answerNum++}. ${q?.question || ''} → ${a.answer}`;
+                    answerContent += `${q?.question || ''} → ${a.answer}`;
                     if (a.explanation) answerContent += ` (${a.explanation})`;
                     answerContent += `\n`;
                 });
                 answerContent += `\n`;
             }
-            
+
             // 原型填空答案
             if (quiz.answer.prototype_filling?.length > 0) {
                 quiz.answer.prototype_filling.forEach(a => {
                     const q = quiz.quiz.prototype_filling?.find(x => x.num === a.num);
-                    answerContent += `${answerNum++}. ${q?.question || ''} → ${a.answer}`;
+                    answerContent += `${q?.question || ''} → ${a.answer}`;
                     if (a.explanation) answerContent += ` (${a.explanation})`;
                     answerContent += `\n`;
                 });
                 answerContent += `\n`;
             }
-            
+
             // 变形填空答案
             if (quiz.answer.inflection_filling?.length > 0) {
                 quiz.answer.inflection_filling.forEach(a => {
                     const q = quiz.quiz.inflection_filling?.find(x => x.num === a.num);
-                    answerContent += `${answerNum++}. ${q?.question || ''} → ${a.answer}`;
+                    answerContent += `${q?.question || ''} → ${a.answer}`;
                     if (a.explanation) answerContent += ` (${a.explanation})`;
                     answerContent += `\n`;
                 });
