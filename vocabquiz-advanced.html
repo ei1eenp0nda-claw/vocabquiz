@@ -240,6 +240,110 @@
             opacity: 1;
             visibility: visible;
         }
+        .filter-section {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8fafc;
+            border-radius: 12px;
+            border: 2px dashed #cbd5e1;
+        }
+        .filter-stats {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+        }
+        .filter-stat-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 14px;
+            padding: 6px 12px;
+            border-radius: 16px;
+            background: #f1f5f9;
+        }
+        .filter-stat-item.new { background: #fef3c7; color: #92400e; }
+        .filter-stat-item.familiar { background: #dbeafe; color: #1e40af; }
+        .filter-stat-item.flexible { background: #fce7f3; color: #9d174d; }
+        .filter-stat-item.basic { background: #e5e7eb; color: #4b5563; }
+        .filter-category {
+            margin-top: 15px;
+        }
+        .filter-category-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .filter-category-title.new { background: #fef3c7; color: #92400e; border-left: 3px solid #f59e0b; }
+        .filter-category-title.familiar { background: #dbeafe; color: #1e40af; border-left: 3px solid #3b82f6; }
+        .filter-category-title.flexible { background: #fce7f3; color: #9d174d; border-left: 3px solid #ec4899; }
+        .filter-category-title.basic { background: #e5e7eb; color: #4b5563; border-left: 3px solid #9ca3af; }
+        .filter-category-select {
+            font-size: 12px;
+            padding: 2px 8px;
+            cursor: pointer;
+            border-radius: 4px;
+            background: rgba(255,255,255,0.5);
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+        .filter-category-select:hover {
+            background: rgba(255,255,255,0.9);
+        }
+        .filter-vocab-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            min-height: 50px;
+        }
+        .filter-vocab-tag {
+            padding: 5px 12px;
+            border-radius: 16px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border: 2px solid transparent;
+            user-select: none;
+        }
+        .filter-vocab-tag.selected {
+            border-color: #10b981;
+            box-shadow: 0 0 0 2px rgba(16,185,129,0.2);
+        }
+        .filter-vocab-tag.new { background: #fef3c7; color: #92400e; }
+        .filter-vocab-tag.familiar { background: #dbeafe; color: #1e40af; }
+        .filter-vocab-tag.flexible { background: #fce7f3; color: #9d174d; }
+        .filter-vocab-tag.basic { background: #e5e7eb; color: #4b5563; opacity: 0.6; }
+        .filter-vocab-tag:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .filter-vocab-tag .check {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            background: rgba(255,255,255,0.5);
+        }
+        .filter-vocab-tag.selected .check {
+            background: #10b981;
+            color: white;
+        }
         .add-vocab-box {
             display: flex;
             gap: 10px;
@@ -437,6 +541,20 @@
             </div>
             <div class="add-vocab-hint">✏️ 如有遗漏词汇，可手动添加</div>
             
+            <div class="filter-section hidden" id="filterSection">
+                <h3 style="margin-bottom: 12px;">🎯 智能筛选结果</h3>
+                <div class="filter-stats" id="filterStats">
+                    <div class="filter-stat-item new">📚 生词 <span id="newCount">0</span>个</div>
+                    <div class="filter-stat-item familiar">💡 熟词生义 <span id="familiarCount">0</span>个</div>
+                    <div class="filter-stat-item flexible">🔄 词性活用 <span id="flexibleCount">0</span>个</div>
+                    <div class="filter-stat-item basic">📝 基础词 <span id="basicCount">0</span>个</div>
+                </div>
+                <p style="font-size: 13px; color: #64748b; margin-bottom: 10px;">
+                    💡 点击词汇可选中/取消，只有选中的词汇会生成题目。基础词默认不选中。
+                </p>
+                <div id="filterCategories"></div>
+            </div>
+            
             <div style="margin-top: 15px;">
                 <label>难度选择</label>
                 <select id="difficulty" style="margin-top: 5px; width: 100%;">
@@ -447,6 +565,7 @@
             </div>
             
             <div class="actions">
+                <button class="btn btn-secondary" id="filterBtn">🎯 智能筛选</button>
                 <button class="btn" id="generateBtn">✨ 生成练习题</button>
             </div>
         </div>
@@ -479,6 +598,14 @@
     <script>
         let currentImage = null;
         let extractedVocab = [];
+        let filteredVocab = {
+            new: [],
+            familiar: [],
+            flexible: [],
+            basic: []
+        };
+        let selectedVocab = new Set();
+        let isFilterApplied = false;
 
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('fileInput');
@@ -608,6 +735,33 @@
             }
         });
 
+        // 智能筛选按钮
+        document.getElementById('filterBtn').addEventListener('click', async () => {
+            const apiKey = document.getElementById('apiKey').value.trim();
+            if (!apiKey) {
+                alert('请先填写 API Key');
+                return;
+            }
+            if (extractedVocab.length === 0) {
+                alert('没有可筛选的词汇');
+                return;
+            }
+
+            showLoading('正在进行智能筛选...');
+            try {
+                const result = await filterVocab(extractedVocab, apiKey);
+                filteredVocab = result;
+                isFilterApplied = true;
+                renderFilterResults();
+                document.getElementById('filterSection').classList.remove('hidden');
+                document.getElementById('filterSection').scrollIntoView({ behavior: 'smooth' });
+            } catch (err) {
+                alert('筛选失败: ' + err.message);
+            } finally {
+                hideLoading();
+            }
+        });
+
         function renderVocabList() {
             vocabList.innerHTML = extractedVocab.map((v, i) => 
                 `<span class="vocab-tag">${escapeHtml(v)}<span class="remove" onclick="removeVocab(${i})" data-tooltip="点击删除">×</span></span>`
@@ -621,7 +775,15 @@
             const apiKey = document.getElementById('apiKey').value.trim();
             const difficulty = document.getElementById('difficulty').value;
             
-            if (extractedVocab.length === 0) {
+            // 确定要使用的词汇列表
+            let vocabToUse = extractedVocab;
+            if (isFilterApplied) {
+                vocabToUse = Array.from(selectedVocab);
+                if (vocabToUse.length === 0) {
+                    alert('请至少选择一个词汇');
+                    return;
+                }
+            } else if (extractedVocab.length === 0) {
                 alert('没有可生成题目的词汇');
                 return;
             }
@@ -629,7 +791,7 @@
             showLoading('正在生成练习题...');
             
             try {
-                const quiz = await generateQuiz(extractedVocab, difficulty, apiKey);
+                const quiz = await generateQuiz(vocabToUse, difficulty, apiKey);
                 renderQuiz(quiz);
                 
                 quizCard.classList.remove('hidden');
@@ -703,6 +865,161 @@
             if (match) return JSON.parse(match[0]);
             throw new Error('无法解析词汇列表');
         }
+
+        // 智能筛选词汇
+        async function filterVocab(vocabList, apiKey) {
+            const vocabStr = vocabList.join(', ');
+            const prompt = `请对以下词汇进行智能分类分析：${vocabStr}
+
+请将每个词汇分类到以下四类之一：
+
+1. **new（生词）**：低频词、高考词汇表外的词汇、学生可能不熟悉的词
+2. **familiar（熟词生义）**：常见词的不常见意思（如 value 作动词"重视"、book 作动词"预订"）
+3. **flexible（词性活用）**：有多种词性，可能需要关注词性转换（如 function n.→v.、present adj./v./n.）
+4. **basic（基础词）**：非常基础的词汇（如 however, therefore, and, but, the, a, an, is, are, have, do, go, come, get, make, take等），这些是功能词或过于简单的词
+
+返回JSON格式：
+{
+  "new": ["词汇1", "词汇2"],
+  "familiar": ["词汇3", "词汇4"],
+  "flexible": ["词汇5", "词汇6"],
+  "basic": ["词汇7", "词汇8"]
+}
+
+规则：
+- 每个词汇必须且只能属于一个分类
+- 确保分类准确，生词应该是学生可能不认识或不熟悉的
+- 熟词生义必须是常见词但在此语境下有特殊含义
+- 基础词应该极少出现在题目中
+
+只返回JSON，不要有其他文字。`;
+
+            const cleanApiKey = apiKey.replace(/[^\x00-\x7F]/g, '').trim();
+            const response = await fetch('https://ark.cn-beijing.volces.com/api/v3/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${cleanApiKey}`
+                },
+                body: JSON.stringify({
+                    model: document.getElementById('llmModel').value,
+                    messages: [
+                        { role: 'system', content: '你是一个专业的英语词汇分析专家，擅长根据高考英语水平对词汇进行分类。' },
+                        { role: 'user', content: prompt }
+                    ],
+                    temperature: 0.3,
+                    max_tokens: 2000
+                })
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error?.message || 'API 请求失败');
+            }
+
+            const data = await response.json();
+            const content = data.choices[0].message.content;
+            
+            try {
+                const match = content.match(/\{[\s\S]*\}/);
+                if (match) {
+                    const result = JSON.parse(match[0]);
+                    // 确保四个分类都存在
+                    return {
+                        new: result.new || [],
+                        familiar: result.familiar || [],
+                        flexible: result.flexible || [],
+                        basic: result.basic || []
+                    };
+                }
+                throw new Error('无法解析筛选结果');
+            } catch (err) {
+                console.error('解析筛选结果失败:', err, content);
+                // 如果解析失败，返回默认分类（所有词都作为生词）
+                return {
+                    new: vocabList,
+                    familiar: [],
+                    flexible: [],
+                    basic: []
+                };
+            }
+        }
+
+        // 渲染筛选结果
+        function renderFilterResults() {
+            const categories = [
+                { key: 'new', label: '📚 生词', class: 'new', desc: '低频词、高考词汇表外' },
+                { key: 'familiar', label: '💡 熟词生义', class: 'familiar', desc: '常见词的不常见意思' },
+                { key: 'flexible', label: '🔄 词性活用', class: 'flexible', desc: '需要关注词性转换' },
+                { key: 'basic', label: '📝 基础词', class: 'basic', desc: '过于基础的词汇' }
+            ];
+
+            // 更新统计
+            document.getElementById('newCount').textContent = filteredVocab.new.length;
+            document.getElementById('familiarCount').textContent = filteredVocab.familiar.length;
+            document.getElementById('flexibleCount').textContent = filteredVocab.flexible.length;
+            document.getElementById('basicCount').textContent = filteredVocab.basic.length;
+
+            // 初始化选中状态（默认选中新词、熟词生义、词性活用，不选基础词）
+            selectedVocab.clear();
+            filteredVocab.new.forEach(w => selectedVocab.add(w));
+            filteredVocab.familiar.forEach(w => selectedVocab.add(w));
+            filteredVocab.flexible.forEach(w => selectedVocab.add(w));
+
+            // 渲染分类
+            const container = document.getElementById('filterCategories');
+            container.innerHTML = categories.map(cat => {
+                const words = filteredVocab[cat.key] || [];
+                if (words.length === 0) return '';
+                
+                const allSelected = words.every(w => selectedVocab.has(w));
+                const selectText = allSelected ? '取消全选' : '全选';
+                
+                return `
+                    <div class="filter-category">
+                        <div class="filter-category-title ${cat.class}">
+                            <span>${cat.label} · ${cat.desc} (${words.length}个)</span>
+                            <span class="filter-category-select" onclick="toggleCategory('${cat.key}')">${selectText}</span>
+                        </div>
+                        <div class="filter-vocab-list">
+                            ${words.map(word => {
+                                const isSelected = selectedVocab.has(word);
+                                return `<span class="filter-vocab-tag ${cat.class} ${isSelected ? 'selected' : ''}" onclick="toggleWord('${word.replace(/'/g, "\\'")}', '${cat.key}')">
+                                    <span class="check">${isSelected ? '✓' : ''}</span>
+                                    ${escapeHtml(word)}
+                                </span>`;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 切换整个分类的选中状态
+        window.toggleCategory = function(category) {
+            const words = filteredVocab[category] || [];
+            const allSelected = words.every(w => selectedVocab.has(w));
+            
+            words.forEach(word => {
+                if (allSelected) {
+                    selectedVocab.delete(word);
+                } else {
+                    selectedVocab.add(word);
+                }
+            });
+            
+            renderFilterResults();
+        };
+
+        // 切换单个词汇的选中状态
+        window.toggleWord = function(word, category) {
+            if (selectedVocab.has(word)) {
+                selectedVocab.delete(word);
+            } else {
+                selectedVocab.add(word);
+            }
+            renderFilterResults();
+        };
 
         async function generateQuiz(vocabList, difficulty, apiKey) {
             const vocabStr = vocabList.join(', ');
