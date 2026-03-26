@@ -493,21 +493,11 @@
                     <label>豆包 API Key</label>
                     <input type="password" id="apiKey" placeholder="输入你的豆包 API Key">
                 </div>
-                <div class="config-item">
-                    <label>模型（OCR）</label>
-                    <select id="visionModel">
-                        <option value="doubao-seed-1-6-vision-250815">doubao-vision</option>
-                    </select>
-                </div>
-                <div class="config-item">
-                    <label>模型（生成）</label>
-                    <select id="llmModel">
-                        <option value="ep-m-20260326144424-5p8pb">doubao-seed-1.8</option>
-                    </select>
-                </div>
             </div>
             <p style="font-size: 12px; color: #999;">
                 💡 提示：在 <a href="https://console.volcengine.com/ark/" target="_blank">火山引擎</a> 获取 API Key
+                <br>
+                🔄 当前使用模型: doubao-seed-1-6-lite-251015
             </p>
         </div>
 
@@ -842,15 +832,18 @@
                     'Authorization': `Bearer ${cleanApiKey}`
                 },
                 body: JSON.stringify({
-                    model: document.getElementById('visionModel').value,
+                    model: "doubao-seed-1-6-lite-251015",
+                    max_completion_tokens: 65535,
                     messages: [
-                        { role: 'system', content: '你是一个OCR识别专家，专门识别图片中的英文词汇。' },
-                        { role: 'user', content: [
-                            { type: 'text', text: '找出图片中所有英文单词和词组（选项A/B/C/D后的词汇），返回JSON数组格式：["word1", "word2", ...]。只返回JSON数组，不要有其他文字。' },
-                            { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64Image}` } }
-                        ]}
+                        {
+                            role: 'user',
+                            content: [
+                                { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64Image}` } },
+                                { type: 'text', text: '找出图片中所有英文单词和词组（选项A/B/C/D后的词汇），返回JSON数组格式：["word1", "word2", ...]。只返回JSON数组，不要有其他文字。' }
+                            ]
+                        }
                     ],
-                    temperature: 0.1
+                    reasoning_effort: 'medium'
                 })
             });
 
@@ -902,13 +895,12 @@
                     'Authorization': `Bearer ${cleanApiKey}`
                 },
                 body: JSON.stringify({
-                    model: document.getElementById('llmModel').value,
+                    model: "doubao-seed-1-6-lite-251015",
+                    max_completion_tokens: 65535,
                     messages: [
-                        { role: 'system', content: '你是一个专业的英语词汇分析专家，擅长根据高考英语水平对词汇进行分类。' },
                         { role: 'user', content: prompt }
                     ],
-                    temperature: 0.3,
-                    max_tokens: 2000
+                    reasoning_effort: 'medium'
                 })
             });
 
@@ -954,17 +946,16 @@
                 { key: 'basic', label: '📝 基础词', class: 'basic', desc: '过于基础的词汇' }
             ];
 
-            // 更新统计
-            document.getElementById('newCount').textContent = filteredVocab.new.length;
-            document.getElementById('familiarCount').textContent = filteredVocab.familiar.length;
-            document.getElementById('flexibleCount').textContent = filteredVocab.flexible.length;
-            document.getElementById('basicCount').textContent = filteredVocab.basic.length;
+            // 初始化选中状态（默认选中新词、熟词生义、词性活用，不选基础词）- 只在第一次渲染时
+            if (selectedVocab.size === 0 && !window.filterInitialized) {
+                filteredVocab.new.forEach(w => selectedVocab.add(w));
+                filteredVocab.familiar.forEach(w => selectedVocab.add(w));
+                filteredVocab.flexible.forEach(w => selectedVocab.add(w));
+                window.filterInitialized = true;
+            }
 
-            // 初始化选中状态（默认选中新词、熟词生义、词性活用，不选基础词）
-            selectedVocab.clear();
-            filteredVocab.new.forEach(w => selectedVocab.add(w));
-            filteredVocab.familiar.forEach(w => selectedVocab.add(w));
-            filteredVocab.flexible.forEach(w => selectedVocab.add(w));
+            // 更新统计
+            updateFilterStats();
 
             // 渲染分类
             const container = document.getElementById('filterCategories');
@@ -979,24 +970,64 @@
                     <div class="filter-category">
                         <div class="filter-category-title ${cat.class}">
                             <span>${cat.label} · ${cat.desc} (${words.length}个)</span>
-                            <span class="filter-category-select" onclick="toggleCategory('${cat.key}')">${selectText}</span>
+                            <span class="filter-category-select" data-category="${cat.key}" data-action="toggle-all">${selectText}</span>
                         </div>
-                        <div class="filter-vocab-list">
+                        <div class="filter-vocab-list" data-category="${cat.key}">
                             ${words.map(word => {
                                 const isSelected = selectedVocab.has(word);
-                                return `<span class="filter-vocab-tag ${cat.class} ${isSelected ? 'selected' : ''}" onclick="toggleWord('${word.replace(/'/g, "\\'")}', '${cat.key}')">
+                                const wordEscaped = escapeHtml(word);
+                                return `<span class="filter-vocab-tag ${cat.class} ${isSelected ? 'selected' : ''}" data-word="${wordEscaped}" data-category="${cat.key}">
                                     <span class="check">${isSelected ? '✓' : ''}</span>
-                                    ${escapeHtml(word)}
+                                    ${wordEscaped}
                                 </span>`;
                             }).join('')}
                         </div>
                     </div>
                 `;
             }).join('');
+            
+            // 绑定点击事件
+            bindFilterEvents();
+        }
+        
+        // 更新统计数字
+        function updateFilterStats() {
+            // 统计各分类选中的数量
+            const newSelected = filteredVocab.new.filter(w => selectedVocab.has(w)).length;
+            const familiarSelected = filteredVocab.familiar.filter(w => selectedVocab.has(w)).length;
+            const flexibleSelected = filteredVocab.flexible.filter(w => selectedVocab.has(w)).length;
+            const basicSelected = filteredVocab.basic.filter(w => selectedVocab.has(w)).length;
+            
+            document.getElementById('newCount').textContent = `${newSelected}/${filteredVocab.new.length}`;
+            document.getElementById('familiarCount').textContent = `${familiarSelected}/${filteredVocab.familiar.length}`;
+            document.getElementById('flexibleCount').textContent = `${flexibleSelected}/${filteredVocab.flexible.length}`;
+            document.getElementById('basicCount').textContent = `${basicSelected}/${filteredVocab.basic.length}`;
+        }
+        
+        // 绑定筛选区域的事件
+        function bindFilterEvents() {
+            // 绑定全选/取消全选按钮
+            document.querySelectorAll('.filter-category-select[data-action="toggle-all"]').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const category = this.getAttribute('data-category');
+                    toggleCategory(category);
+                });
+            });
+            
+            // 绑定单词标签点击事件
+            document.querySelectorAll('.filter-vocab-tag[data-word]').forEach(tag => {
+                tag.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const word = this.getAttribute('data-word');
+                    const category = this.getAttribute('data-category');
+                    toggleWord(word, category);
+                });
+            });
         }
 
         // 切换整个分类的选中状态
-        window.toggleCategory = function(category) {
+        function toggleCategory(category) {
             const words = filteredVocab[category] || [];
             const allSelected = words.every(w => selectedVocab.has(w));
             
@@ -1008,18 +1039,52 @@
                 }
             });
             
-            renderFilterResults();
-        };
+            // 只更新UI，不重新渲染整个列表
+            updateFilterUI(category);
+        }
 
         // 切换单个词汇的选中状态
-        window.toggleWord = function(word, category) {
+        function toggleWord(word, category) {
             if (selectedVocab.has(word)) {
                 selectedVocab.delete(word);
             } else {
                 selectedVocab.add(word);
             }
-            renderFilterResults();
-        };
+            updateFilterUI(category);
+        }
+        
+        // 只更新指定分类的UI
+        function updateFilterUI(category) {
+            const words = filteredVocab[category] || [];
+            const categoryContainer = document.querySelector(`.filter-vocab-list[data-category="${category}"]`);
+            
+            if (!categoryContainer) return;
+            
+            // 更新该分类下的所有单词标签
+            categoryContainer.querySelectorAll('.filter-vocab-tag').forEach(tag => {
+                const word = tag.getAttribute('data-word');
+                const isSelected = selectedVocab.has(word);
+                const checkSpan = tag.querySelector('.check');
+                
+                if (isSelected) {
+                    tag.classList.add('selected');
+                    checkSpan.textContent = '✓';
+                } else {
+                    tag.classList.remove('selected');
+                    checkSpan.textContent = '';
+                }
+            });
+            
+            // 更新全选按钮文字
+            const selectBtn = document.querySelector(`.filter-category-select[data-category="${category}"]`);
+            if (selectBtn) {
+                const allSelected = words.every(w => selectedVocab.has(w));
+                selectBtn.textContent = allSelected ? '取消全选' : '全选';
+            }
+            
+            // 更新统计
+            updateFilterStats();
+        }
 
         async function generateQuiz(vocabList, difficulty, apiKey) {
             const vocabStr = vocabList.join(', ');
@@ -1160,12 +1225,12 @@ The experienced professor always encourages his students to ______ new ideas rat
                     'Authorization': `Bearer ${cleanApiKey}`
                 },
                 body: JSON.stringify({
-                    model: document.getElementById('llmModel').value,
+                    model: "doubao-seed-1-6-lite-251015",
+                    max_completion_tokens: 65535,
                     messages: [
-                        { role: 'system', content: '你是一个专业的英语教师，擅长出高质量的练习题。' },
                         { role: 'user', content: prompt }
                     ],
-                    temperature: 0.7
+                    reasoning_effort: 'medium'
                 })
             });
 
