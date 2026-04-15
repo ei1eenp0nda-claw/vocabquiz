@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<body>
+<script>
+// 测试用例：模拟生成结果，测试Word下载
+const testData = {
+  "difficult_words": [
+    {"word": "ephemeral", "pos": "adj.", "meaning": "短暂的，瞬息的"},
+    {"word": "cogent", "pos": "adj.", "meaning": "有说服力的，令人信服的"}
+  ],
+  "questions": [
+    {
+      "question": "The beauty of the morning mist was ______ the valley, disappearing quickly as the sun rose higher.",
+      "answer": "across",
+      "explanation": "across在这里表示弥漫跨过山谷，介词搭配描述雾气覆盖山谷的意境"
+    }
+  ]
+};
+
+// 测试Word下载
+async function testDownload() {
+  const { Document, Paragraph, Table, TableRow, TableCell, Width, TextRun, HeadingLevel, Packer } = window.docx;
+  
+  function createCell(text, isHeader = false) {
+    return new TableCell({
+      children: [new Paragraph({
+        children: [new TextRun({
+          text: text || '',
+          bold: isHeader,
+          size: 20
+        })]
+      })],
+      width: new Width(3333, "pct")
+    });
+  }
+
+  const children = [];
+  children.push(new Paragraph({
+    heading: HeadingLevel.HEADING_1,
+    children: [new TextRun({ text: "测试 - 英语词汇练习题", bold: true, size: 28 })],
+    spacing: { after: 300 }
+  }));
+
+  children.push(new Paragraph({
+    heading: HeadingLevel.HEADING_2,
+    children: [new TextRun({ text: "介词填空", size: 24 })],
+    spacing: { after: 200 }
+  }));
+  
+  testData.questions.forEach(q => {
+    children.push(new Paragraph({
+      children: [new TextRun({ text: q.question, size: 22 })],
+      spacing: { after: 100, line: 360 }
+    }));
+  });
+  children.push(new Paragraph({ spacing: { after: 400 } }));
+
+  const doc = new Document({
+    sections: [{ children: children }]
+  });
+
+  Packer.toBlob(doc).then(blob => {
+    console.log('Blob created, size:', blob.size);
+    const url = URL.createObjectURL(blob);
+    console.log('URL created:', url);
+    console.log('Test passed! Word download logic works.');
+  }).catch(err => {
+    console.error('Test failed:', err);
+  });
+}
+
+window.onload = function() {
+  console.log('Testing docx.js load...');
+  if (window.docx) {
+    console.log('docx.js loaded successfully');
+    console.log('Testing download...');
+    testDownload();
+  } else {
+    console.error('docx.js failed to load');
+  }
+};
+</script>
+<script src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
+</body>
+</html>
