@@ -664,8 +664,9 @@
 题目：We should ______ our parents. (respect)
 答案：respect（原形）
 
-【句子长度要求】
-填空题（无提示填空、原型填空、变形填空）的句子长度要求：**15-25个单词**
+【难度与长度要求】
+- **句子难度要求：** 参考COCA（美国当代英语语料库）和vocabulary.com的词频分级，使用地道的外刊句式，适当提升句子复杂度，避免过于简单的基础句式。
+- **句子长度要求：** 填空题（无提示填空、原型填空、变形填空）的句子长度要求：**15-25个单词**
 
 长句子示例（18-20词）：
 Despite numerous challenges, the young inventor decided to ______ his creation before anyone else could copy it.
@@ -951,118 +952,96 @@ The experienced professor always encourages his students to ______ new ideas rat
         }
 
         function renderQuiz(quiz) {
-            let questionNum = 1;
-            // 生成纯文本题目
-            let quizContent = `英语练习题\n`;
-            quizContent += `==============\n\n`;
+            // 生成纯文本题目 - 去除大标题和小题编号
+            let quizContent = '';
             
             // 中译英翻译题
             if (quiz.quiz.translation_cn_to_en?.length > 0) {
-                quizContent += `一、中译英（根据中文写出英文单词）\n`;
                 quiz.quiz.translation_cn_to_en.forEach(q => {
-                    quizContent += `${questionNum++}. ${q.question}\n`;
+                    quizContent += `${q.question}\n\n`;
                 });
-                quizContent += `\n`;
             }
             
             // 英译中翻译题
             if (quiz.quiz.translation_en_to_cn?.length > 0) {
-                quizContent += `二、英译中（写出下列单词的中文意思）\n`;
                 quiz.quiz.translation_en_to_cn.forEach(q => {
-                    quizContent += `${questionNum++}. ${q.question}\n`;
+                    quizContent += `${q.question}\n\n`;
                 });
-                quizContent += `\n`;
             }
             
             // 无提示填空
             if (quiz.quiz.no_hint?.length > 0) {
-                quizContent += `三、无提示填空（根据句意填空）\n`;
                 quiz.quiz.no_hint.forEach(q => {
-                    quizContent += `${questionNum++}. ${q.question}\n`;
+                    quizContent += `${q.question}\n\n`;
                 });
-                quizContent += `\n`;
             }
             
             // 原型填空
             if (quiz.quiz.prototype_filling?.length > 0) {
-                quizContent += `四、原型填空（用所给词的原形填空）\n`;
                 quiz.quiz.prototype_filling.forEach(q => {
-                    quizContent += `${questionNum++}. ${q.question}\n`;
+                    quizContent += `${q.question}\n\n`;
                 });
-                quizContent += `\n`;
             }
             
             // 变形填空
             if (quiz.quiz.inflection_filling?.length > 0) {
-                quizContent += `五、变形填空（用所给词的适当形式填空）\n`;
                 quiz.quiz.inflection_filling.forEach(q => {
-                    quizContent += `${questionNum++}. ${q.question}\n`;
+                    quizContent += `${q.question}\n\n`;
                 });
             }
             
-            quizText.value = quizContent;
+            quizText.value = quizContent.trim();
             
-            // 生成纯文本答案
-            let answerNum = 1;
-            let answerContent = `参考答案\n`;
-            answerContent += `==============\n\n`;
+            // 生成纯文本答案 - 去除大标题和小题编号
+            let answerContent = '';
             
             // 中译英答案
             if (quiz.answer.translation_cn_to_en?.length > 0) {
-                answerContent += `一、中译英\n`;
                 quiz.answer.translation_cn_to_en.forEach(a => {
                     const q = quiz.quiz.translation_cn_to_en?.find(x => x.num === a.num);
-                    answerContent += `${answerNum++}. ${q?.question || ''} → ${a.answer}\n`;
+                    answerContent += `${q?.question || ''} → ${a.answer}\n\n`;
                 });
-                answerContent += `\n`;
             }
             
             // 英译中答案
             if (quiz.answer.translation_en_to_cn?.length > 0) {
-                answerContent += `二、英译中\n`;
                 quiz.answer.translation_en_to_cn.forEach(a => {
                     const q = quiz.quiz.translation_en_to_cn?.find(x => x.num === a.num);
-                    answerContent += `${answerNum++}. ${q?.question || ''} → ${a.answer}\n`;
+                    answerContent += `${q?.question || ''} → ${a.answer}\n\n`;
                 });
-                answerContent += `\n`;
             }
             
             // 无提示填空答案
             if (quiz.answer.no_hint?.length > 0) {
-                answerContent += `三、无提示填空\n`;
                 quiz.answer.no_hint.forEach(a => {
                     const q = quiz.quiz.no_hint?.find(x => x.num === a.num);
-                    answerContent += `${answerNum++}. ${q?.question || ''} → ${a.answer}`;
+                    answerContent += `${q?.question || ''} → ${a.answer}`;
                     if (a.explanation) answerContent += ` (${a.explanation})`;
-                    answerContent += `\n`;
+                    answerContent += `\n\n`;
                 });
-                answerContent += `\n`;
             }
             
             // 原型填空答案
             if (quiz.answer.prototype_filling?.length > 0) {
-                answerContent += `四、原型填空\n`;
                 quiz.answer.prototype_filling.forEach(a => {
                     const q = quiz.quiz.prototype_filling?.find(x => x.num === a.num);
-                    answerContent += `${answerNum++}. ${q?.question || ''} → ${a.answer}`;
+                    answerContent += `${q?.question || ''} → ${a.answer}`;
                     if (a.explanation) answerContent += ` (${a.explanation})`;
-                    answerContent += `\n`;
+                    answerContent += `\n\n`;
                 });
-                answerContent += `\n`;
             }
             
             // 变形填空答案
             if (quiz.answer.inflection_filling?.length > 0) {
-                answerContent += `五、变形填空\n`;
                 quiz.answer.inflection_filling.forEach(a => {
                     const q = quiz.quiz.inflection_filling?.find(x => x.num === a.num);
-                    answerContent += `${answerNum++}. ${q?.question || ''} → ${a.answer}`;
+                    answerContent += `${q?.question || ''} → ${a.answer}`;
                     if (a.explanation) answerContent += ` (${a.explanation})`;
-                    answerContent += `\n`;
+                    answerContent += `\n\n`;
                 });
             }
             
-            answerText.value = answerContent;
+            answerText.value = answerContent.trim();
         }
 
         function updateStep(step) {
