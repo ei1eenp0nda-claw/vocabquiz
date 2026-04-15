@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
+</head>
+<body>
+<h1>Debug: 验证粘贴</h1>
+<script>
+console.log("docx loaded:", window.docx);
+document.addEventListener('paste', (e) => {
+    console.log("paste event caught");
+    const items = e.clipboardData.items;
+    console.log("items length:", items.length);
+    for (let item of items) {
+        console.log("item type:", item.type);
+        if (item.type.startsWith('image/')) {
+            console.log("found image");
+        }
+    }
+});
+</script>
+</body>
+</html>
