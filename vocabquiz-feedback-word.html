@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VocabQuiz - 反馈版（Word导出）</title>
-    <script src="https://unpkg.com/docx@7.1.0/build/index.js"></script>
+    <script src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -390,6 +390,15 @@
                 <button class="btn btn-small" id="addVocabBtn">➕ 添加</button>
             </div>
             
+            <div style="margin-top: 15px;">
+                <label>难度筛选严格程度</label>
+                <select id="difficultyLevel" style="margin-top: 5px; width: 100%;">
+                    <option value="relaxed">基础（保留更多词汇，筛选较宽松）</option>
+                    <option value="normal" selected>中等（上海高二中等水平，默认）</option>
+                    <option value="strict">高阶（只保留最难的超纲词汇）</option>
+                </select>
+            </div>
+            
             <div class="actions">
                 <button class="btn" id="generateBtn">✨ 生成练习题</button>
             </div>
@@ -436,7 +445,7 @@
     </div>
 
     <script>
-        const { Document, Paragraph, Table, TableRow, TableCell, Width, TextRun, HeadingLevel, Packer } = docx;
+        const { Document, Paragraph, Table, TableRow, TableCell, Width, TextRun, HeadingLevel, Packer } = window.docx;
 
         let currentImage = null;
         let extractedVocab = [];
@@ -684,19 +693,39 @@
 
         async function generateQuiz(vocabList, apiKey) {
             const vocabStr = vocabList.join(', ');
+            const difficultyLevel = document.getElementById('difficultyLevel').value;
+            
+            let difficultyInstruction = '';
+            if (difficultyLevel === 'relaxed') {
+                difficultyInstruction = '筛选标准：宽松模式，剔除非常简单的词，保留有一定难度的词汇，适合基础练习';
+            } else if (difficultyLevel === 'strict') {
+                difficultyInstruction = '筛选标准：严格模式，只保留真正超纲的难词，大多数上海高二中等水平学生都不认识，适合拔高训练';
+            } else {
+                difficultyInstruction = '筛选标准：中等模式，参考上海高考大纲，剔除已学核心词汇，保留高二中等水平学生普遍不认识的难度词汇，这是默认标准';
+            }
             
             const prompt = `请基于以下词汇列表，按照要求处理：${vocabStr}
 
+【难度筛选要求】
+${difficultyInstruction}
+整体原则：
+- 严格参考**COCA（美国当代英语语料库）词频** 和 **vocabulary.com难度分级**
+- COCA中排名前5000常用词：如果是高考核心词汇，直接剔除
+- 只保留COCA中频偏难词汇（排名5000-15000）以及超纲词汇
+- 句子必须来源于真实外刊（经济学人、卫报、纽约时报等），使用地道、符合逻辑的上下文
+- 句子复杂度要匹配难度：要求包含从句、非谓语动词等结构，不能是简单的主谓宾短句
+
 【用户要求】
-1. 第一步：挑选出对于上海中等水平的高二学生来说**有难度的单词**。剔除太简单的高考核心词汇，保留超出考纲、在COCA词典中属于中频偏难、来源外刊的词汇。参考COCA（美国当代英语语料库）和vocabulary.com的难度分级，高二中等水平学生普遍不认识的才算难题。
+1. 第一步：挑选出符合难度要求的单词。${difficultyInstruction} 参考COCA词频和vocabulary.com难度分级，严格筛选。
 2. 第二步：从这些词汇相关的搭配中挑选介词短语做**无提示填空题**，要求：
    - 空内只填写介词
-   - 使用来源于外刊的真实地道文本
-   - 句子要地道、符合高考难度进阶要求
+   - 使用**来源于外刊的真实地道复杂句式**
+   - 句子要地道、符合上海高二英语进阶难度要求
    - 每个题目只留一个空，就是介词位置
-   - 句子长度控制在15-30个单词
+   - 句子长度控制在18-35个单词（要有足够复杂度，不能太短太简单）
    - 使用 ______ 表示填空位置
-3. 题目单独排版，后面附上答案和详细解析（说明这个介词短语的用法）
+   - 句子必须包含合理的上下文语境，考查介词的地道用法
+3. 题目单独排版，后面附上答案和详细解析（说明这个介词短语的用法、搭配规则）
 4. 最后，为挑选出来的所有难词制作一份**词汇测试表格**：
    - 题目版表格：第一列英文单词，第二列词性，第三列留空给学生填写中文释义
    - 答案版表格：第一列英文单词，第二列词性，第三列中文释义
