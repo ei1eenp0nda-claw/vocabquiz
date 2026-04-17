@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VocabQuiz - 反馈版（Word导出）</title>
+    <script src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            color: white;
+            margin-bottom: 10px;
+            font-size: 2.3em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        .subtitle {
+            text-align: center;
+            color: rgba(255,255,255,0.9);
+            margin-bottom: 25px;
+            font-size: 1em;
+        }
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        .upload-area {
+            border: 3px dashed #ccc;
+            border-radius: 12px;
+            padding: 50px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #fafafa;
+        }
+        .upload-area:hover, .upload-area.dragover {
+            border-color: #f5576c;
+            background: #fff0f3;
+        }
+        .upload-area.pasted {
+            border-color: #10b981;
+            background: #ecfdf5;
+        }
+        .upload-icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+        .upload-text {
+            color: #666;
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+        .upload-hint {
+            color: #999;
+            font-size: 13px;
+        }
+        .preview-image {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 8px;
+            margin-top: 15px;
+            display: none;
+        }
+        .config-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+        .config-item {
+            display: flex;
+            flex-direction: column;
+        }
+        .config-item.full-width {
+            grid-column: 1 / -1;
+        }
+        label {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+        input, select, textarea {
+            padding: 10px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #f5576c;
+        }
+        textarea {
+            font-family: monospace;
+            resize: vertical;
+        }
+        .btn {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(245, 87, 108, 0.4);
+        }
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .btn-secondary {
+            background: #f3f4f6;
+            color: #333;
+        }
+        .btn-secondary:hover {
+            background: #e5e7eb;
+        }
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 13px;
+        }
+        .btn-download {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+        .btn-download:hover {
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
+        .actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 30px;
+        }
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #f5576c;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .error {
+            background: #fee2e2;
+            color: #dc2626;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 12px;
+            display: none;
+            font-size: 14px;
+        }
+        .success {
+            background: #d1fae5;
+            color: #059669;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 12px;
+            display: none;
+            font-size: 14px;
+        }
+        .vocab-section {
+            margin-top: 15px;
+        }
+        .vocab-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 10px 0;
+        }
+        .vocab-tag {
+            background: #f3e8ff;
+            color: #9333ea;
+            padding: 5px 12px;
+            border-radius: 16px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .vocab-tag .remove {
+            cursor: pointer;
+            opacity: 0.6;
+            font-weight: bold;
+        }
+        .vocab-tag .remove:hover {
+            opacity: 1;
+            color: #dc2626;
+        }
+        .add-vocab-box {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .result-box {
+            margin-top: 20px;
+        }
+        .result-textarea {
+            width: 100%;
+            min-height: 300px;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-family: system-ui, -apple-system, sans-serif;
+            font-size: 14px;
+            line-height: 1.8;
+            background: #fafafa;
+            white-space: pre-wrap;
+        }
+        .copy-btn {
+            margin-top: 10px;
+            background: #10b981;
+        }
+        .copy-btn:hover {
+            background: #059669;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
+        .hidden { display: none !important; }
+        .step-indicator {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+        .step {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #999;
+            font-size: 14px;
+        }
+        .step.active {
+            color: #f5576c;
+            font-weight: 600;
+        }
+        .step.completed {
+            color: #10b981;
+        }
+        .step-num {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+        .step.active .step-num {
+            background: #f5576c;
+            color: white;
+        }
+        .step.completed .step-num {
+            background: #10b981;
+            color: white;
+        }
+        h3 {
+            margin-bottom: 12px;
+            color: #333;
+        }
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #eee;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 8px 8px 0 0;
+            color: #666;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .tab.active {
+            background: #f093fb;
+            color: white;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📝 VocabQuiz 反馈版</h1>
+        <p class="subtitle">挑选难题 + 介词填空 + 词汇表格 | 导出 Word 文件</p>
+        
+        <div class="card step-indicator">
+            <div class="step active" id="step1">
+                <div class="step-num">1</div>
+                <span>上传图片</span>
+            </div>
+            <div class="step" id="step2">
+                <div class="step-num">2</div>
+                <span>提取词汇</span>
+            </div>
+            <div class="step" id="step3">
+                <div class="step-num">3</div>
+                <span>生成题目</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>⚙️ API 配置</h3>
+            <div class="config-section">
+                <div class="config-item full-width">
+                    <label>豆包 API Key</label>
+                    <input type="password" id="apiKey" placeholder="输入你的豆包 API Key">
+                </div>
+                <div class="config-item">
+                    <label>模型（OCR）</label>
+                    <select id="visionModel">
+                        <option value="doubao-seed-1-6-vision-250815">doubao-vision</option>
+                    </select>
+                </div>
+                <div class="config-item">
+                    <label>模型（生成）</label>
+                    <select id="llmModel">
+                        <option value="doubao-1-5-lite-32k-250115">doubao-lite-32k</option>
+                    </select>
+                </div>
+            </div>
+            <p style="font-size: 12px; color: #999;">
+                💡 提示：在 <a href="https://console.volcengine.com/ark/" target="_blank">火山引擎</a> 获取 API Key
+            </p>
+        </div>
+
+        <div class="card" id="uploadCard">
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">📋</div>
+                <div class="upload-text">粘贴或点击上传图片</div>
+                <div class="upload-hint">支持 Ctrl+V 粘贴截图，或拖拽图片到此处</div>
+                <input type="file" id="fileInput" accept="image/*" style="display: none;">
+            </div>
+            <img id="previewImage" class="preview-image" alt="预览">
+            <div id="uploadError" class="error"></div>
+            <div id="uploadSuccess" class="success"></div>
+            
+            <div class="actions">
+                <button class="btn" id="extractBtn" disabled>🔍 提取词汇</button>
+                <button class="btn btn-secondary hidden" id="resetBtn">🔄 重新上传</button>
+            </div>
+        </div>
+
+        <div class="card hidden" id="vocabCard">
+            <h3>📚 识别到的词汇</h3>
+            <div class="vocab-list" id="vocabList"></div>
+            
+            <div class="add-vocab-box">
+                <input type="text" id="addVocabInput" placeholder="输入遗漏的词汇，按回车或点击添加">
+                <button class="btn btn-small" id="addVocabBtn">➕ 添加</button>
+            </div>
+            
+            <div style="margin-top: 15px;">
+                <label>难度筛选严格程度</label>
+                <select id="difficultyLevel" style="margin-top: 5px; width: 100%;">
+                    <option value="relaxed">基础（保留更多词汇，筛选较宽松）</option>
+                    <option value="normal" selected>中等（上海高二中等水平，默认）</option>
+                    <option value="strict">高阶（只保留最难的超纲词汇）</option>
+                </select>
+            </div>
+            
+            <div class="actions">
+                <button class="btn" id="generateBtn">✨ 生成练习题</button>
+            </div>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="loading-spinner"></div>
+            <div id="loadingText">正在处理...</div>
+        </div>
+
+        <div class="card hidden" id="resultCard">
+            <div class="tabs">
+                <div class="tab active" data-tab="questions">题目预览</div>
+                <div class="tab" data-tab="answers">答案解析</div>
+                <div class="tab" data-tab="vocab-table">词汇表格</div>
+            </div>
+            
+            <div class="tab-content active" id="questions-tab">
+                <div class="result-box">
+                    <textarea class="result-textarea" id="questionsText" readonly></textarea>
+                    <button class="btn copy-btn" id="copyQuestionsBtn">📋 复制题目</button>
+                </div>
+            </div>
+            
+            <div class="tab-content" id="answers-tab">
+                <div class="result-box">
+                    <textarea class="result-textarea" id="answersText" readonly></textarea>
+                    <button class="btn copy-btn" id="copyAnswersBtn">📋 复制答案</button>
+                </div>
+            </div>
+            
+            <div class="tab-content" id="vocab-table-tab">
+                <div class="result-box">
+                    <textarea class="result-textarea" id="vocabTableText" readonly></textarea>
+                    <button class="btn copy-btn" id="copyVocabBtn">📋 复制表格</button>
+                </div>
+            </div>
+            
+            <div class="actions" style="margin-top: 20px;">
+                <button class="btn btn-download" id="downloadWordBtn">📥 下载 Word 文件</button>
+                <button class="btn btn-secondary" id="startOverBtn">🏠 重新开始</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { Document, Paragraph, Table, TableRow, TableCell, Width, TextRun, HeadingLevel, Packer } = window.docx;
+
+        let currentImage = null;
+        let extractedVocab = [];
+        let generatedData = null;
+
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const previewImage = document.getElementById('previewImage');
+        const extractBtn = document.getElementById('extractBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const vocabCard = document.getElementById('vocabCard');
+        const vocabList = document.getElementById('vocabList');
+        const addVocabInput = document.getElementById('addVocabInput');
+        const addVocabBtn = document.getElementById('addVocabBtn');
+        const generateBtn = document.getElementById('generateBtn');
+        const resultCard = document.getElementById('resultCard');
+        const loading = document.getElementById('loading');
+        const loadingText = document.getElementById('loadingText');
+
+        // 标签页切换
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(tab.dataset.tab + '-tab').classList.add('active');
+            });
+        });
+
+        uploadArea.addEventListener('click', () => fileInput.click());
+        
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files[0]) handleImage(e.target.files[0]);
+        });
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file?.type.startsWith('image/')) handleImage(file);
+        });
+
+        document.addEventListener('paste', (e) => {
+            const items = e.clipboardData.items;
+            for (let item of items) {
+                if (item.type.startsWith('image/')) {
+                    handleImage(item.getAsFile());
+                    uploadArea.classList.add('pasted');
+                    setTimeout(() => uploadArea.classList.remove('pasted'), 800);
+                    break;
+                }
+            }
+        });
+
+        function handleImage(file) {
+            currentImage = file;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                previewImage.src = e.target.result;
+                previewImage.style.display = 'block';
+                extractBtn.disabled = false;
+                resetBtn.classList.remove('hidden');
+                showSuccess('uploadSuccess', '图片已加载');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        resetBtn.addEventListener('click', () => {
+            currentImage = null;
+            previewImage.src = '';
+            previewImage.style.display = 'none';
+            extractBtn.disabled = true;
+            resetBtn.classList.add('hidden');
+            hideError('uploadError');
+            hideSuccess('uploadSuccess');
+        });
+
+        extractBtn.addEventListener('click', async () => {
+            const apiKey = document.getElementById('apiKey').value.trim();
+            if (!apiKey) {
+                showError('uploadError', '请先填写 API Key');
+                return;
+            }
+
+            showLoading('正在识别图片中的词汇...');
+            
+            try {
+                const base64Image = await fileToBase64(currentImage);
+                const vocab = await extractVocab(base64Image, apiKey);
+                
+                extractedVocab = vocab;
+                renderVocabList();
+                
+                vocabCard.classList.remove('hidden');
+                updateStep(2);
+                vocabCard.scrollIntoView({ behavior: 'smooth' });
+            } catch (err) {
+                showError('uploadError', err.message);
+            } finally {
+                hideLoading();
+            }
+        });
+
+        // 添加词汇
+        function addVocab(word) {
+            word = word.trim();
+            if (!word) return;
+            if (extractedVocab.includes(word)) {
+                alert('该词汇已存在');
+                return;
+            }
+            extractedVocab.push(word);
+            renderVocabList();
+            addVocabInput.value = '';
+        }
+
+        // 删除词汇
+        function removeVocab(index) {
+            extractedVocab.splice(index, 1);
+            renderVocabList();
+        }
+
+        addVocabBtn.addEventListener('click', () => {
+            addVocab(addVocabInput.value);
+        });
+
+        addVocabInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                addVocab(addVocabInput.value);
+            }
+        });
+
+        function renderVocabList() {
+            vocabList.innerHTML = extractedVocab.map((v, i) => 
+                `<span class="vocab-tag">${escapeHtml(v)}<span class="remove" onclick="removeVocab(${i})">×</span></span>`
+            ).join('');
+        }
+
+        generateBtn.addEventListener('click', async () => {
+            const apiKey = document.getElementById('apiKey').value.trim();
+            
+            if (extractedVocab.length === 0) {
+                alert('没有可生成题目的词汇');
+                return;
+            }
+
+            showLoading('正在生成题目...');
+            
+            try {
+                const result = await generateQuiz(extractedVocab, apiKey);
+                generatedData = result;
+                renderResult(result);
+                
+                resultCard.classList.remove('hidden');
+                updateStep(3);
+                resultCard.scrollIntoView({ behavior: 'smooth' });
+            } catch (err) {
+                alert('生成失败: ' + err.message);
+                console.error(err);
+            } finally {
+                hideLoading();
+            }
+        });
+
+        document.getElementById('copyQuestionsBtn').addEventListener('click', () => {
+            document.getElementById('questionsText').select();
+            document.execCommand('copy');
+            alert('题目已复制到剪贴板');
+        });
+
+        document.getElementById('copyAnswersBtn').addEventListener('click', () => {
+            document.getElementById('answersText').select();
+            document.execCommand('copy');
+            alert('答案已复制到剪贴板');
+        });
+
+        document.getElementById('copyVocabBtn').addEventListener('click', () => {
+            document.getElementById('vocabTableText').select();
+            document.execCommand('copy');
+            alert('词汇表格已复制到剪贴板');
+        });
+
+        document.getElementById('startOverBtn').addEventListener('click', () => {
+            location.reload();
+        });
+
+        document.getElementById('downloadWordBtn').addEventListener('click', () => {
+            if (!generatedData) {
+                alert('请先生成题目');
+                return;
+            }
+            downloadWord(generatedData);
+        });
+
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function extractVocab(base64Image, apiKey) {
+            const cleanApiKey = apiKey.replace(/[^\x00-\x7F]/g, '').trim();
+            const response = await fetch('https://ark.cn-beijing.volces.com/api/v3/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${cleanApiKey}`
+                },
+                body: JSON.stringify({
+                    model: document.getElementById('visionModel').value,
+                    messages: [
+                        { role: 'system', content: '你是一个OCR识别专家，专门识别图片中加粗的英文词汇。' },
+                        { role: 'user', content: [
+                            { type: 'text', text: '找出图片中所有加粗的英文单词和词组，返回JSON数组格式：["word1", "word2", ...]。只返回JSON数组，不要有其他文字。' },
+                            { type: 'image_url', image_url: { url: `data:image/png;base64,${base64Image}` } }
+                        ]}
+                    ],
+                    temperature: 0.1
+                })
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error?.message || 'API 请求失败');
+            }
+
+            const data = await response.json();
+            const content = data.choices[0].message.content;
+            const match = content.match(/\[[\s\S]*?\]/);
+            if (match) return JSON.parse(match[0]);
+            throw new Error('无法解析词汇列表');
+        }
+
+        async function generateQuiz(vocabList, apiKey) {
+            const vocabStr = vocabList.join(', ');
+            const difficultyLevel = document.getElementById('difficultyLevel').value;
+            
+            let difficultyInstruction = '';
+            if (difficultyLevel === 'relaxed') {
+                difficultyInstruction = '筛选标准：宽松模式，剔除非常简单的词，保留有一定难度的词汇，适合基础练习';
+            } else if (difficultyLevel === 'strict') {
+                difficultyInstruction = '筛选标准：严格模式，只保留真正超纲的难词，大多数上海高二中等水平学生都不认识，适合拔高训练';
+            } else {
+                difficultyInstruction = '筛选标准：中等模式，参考上海高考大纲，剔除已学核心词汇，保留高二中等水平学生普遍不认识的难度词汇，这是默认标准';
+            }
+            
+            const prompt = `请基于以下词汇列表，按照要求处理：${vocabStr}
+
+【难度筛选要求 - 严格参考COCA和vocabulary.com】
+${difficultyInstruction}
+
+**一、COCA词频分级标准（美国当代英语语料库）**
+
+| 等级 | COCA排名 | 难度标签 | 处理建议 | 上海高二适用性 |
+|------|---------|---------|----------|----------------|
+| K1-K3 | 1-3000 | 高频基础词 | **必须剔除** | 必备核心词汇 |
+| K4-K5 | 3000-8000 | 中等频率词 | 中等难度题目 | 进阶词汇 |
+| K6-K8 | 8000-15000 | 中高频率/偏难词 | 中等-难题 | 较难词汇 |
+| K9+ | 15000+ | 低频率/超纲词 | 难题/挑战题 | 难词/超纲 |
+
+**二、vocabulary.com难度分级标准**
+
+| 等级 | CEFR对应 | 难度标签 | 处理建议 | 适用题型 |
+|------|---------|---------|----------|----------|
+| Beginner | A1-A2 | 基础入门 | **必须剔除** | 不适用 |
+| Intermediate | B1 | 中等水平 | 小心筛选 | 基础题 |
+| Advanced | B2-C1 | 高级水平 | **优先选用** | 中等难题 |
+| Expert | C1-C2 | 专家水平 | 推荐使用 | 难题 |
+| Master | C2+ | 大师水平 | 挑战题优选 | 挑战题 |
+| Elite | Native+ | 母语者级别 | 超高难度 | 超纲挑战 |
+
+**三、严格词汇筛选决策树（必须遍历）**
+
+1. 首先检查COCA词频：
+   - 如果 COCA 排名 1-3000 (K1-K3) → **直接剔除**
+   - 如果 COCA 排名 3001-8000 (K4-K5) → 标记为**中等难度**
+   - 如果 COCA 排名 8001-15000 (K6-K8) → 标记为**较难词汇**
+   - 如果 COCA 排名 15000+ (K9+) → 标记为**难词/挑战词**
+
+2. 其次检查vocabulary.com难度标签：
+   - 如果 Beginner/Intermediate → **直接剔除**
+   - 如果 Advanced → 标记为**中等难度**
+   - 如果 Expert/Master → 标记为**难度词汇**
+   - 如果 Elite → 标记为**超纲难词**
+
+3. 综合判断（两者矛盾时）：
+   - 以COCA词频为主，参考vocabulary.com标签
+   - 如果一个标记为剔除，另一个标记为保留 → 取决于高考大纲是否要求
+   - 优先保留COCA 5000+或vocabulary.com Advanced+的词汇
+
+4. 句子复杂度深度过滤（必须同时满足）：
+   **必须包含从句结构（至少一种）：**
+   - 定语从句: who, whom, whose, which, that, where, when, why
+   - 状语从句: although, though, while, whereas, if, unless, because, since, as
+   - 名词性从句: what, whatever, who, whoever, which, whichever, that, whether, if
+   
+   **必须使用非谓语动词（至少一种）：**
+   - 不定式: to do
+   - 动名词: doing
+   - 现在分词: doing
+   - 过去分词: done
+   
+   **必须使用高级结构（至少一种）：**
+   - 插入语: 使用破折号的插入语
+   - 倒装句: 否定词组置于句首的部分倒装
+   - 强调句: It is/was ... that ... 强调句
+   - 独立主格结构: with复合结构、独立主格等
+   
+   **严样禁止：**
+   - 简单的主谓宾短句（主语+谓语+宾语 < 10词）
+   - 过于简单的并列句（只用and/but/so连接）
+   - 口语化或不正式的表达
+
+**五、外刊来源严格要求（必须遵守）**
+- 句子**必须**来源于真实发表的外刊文章（严禁自编）
+- 接受来源：The Economist, The Guardian, The New York Times, The Washington Post, Financial Times, Wall Street Journal, The Atlantic, Foreign Affairs, Nature, Science
+- 禁止自编句子或简化改编外刊句子
+- 句子必须保持原文的词汇选择和句式结构风格
+
+【用户要求】
+1. 第一步：挑选出符合难度要求的单词。${difficultyInstruction} 参考COCA词频和vocabulary.com难度分级，严格筛选。
+2. 第二步：从这些词汇相关的搭配中挑选介词短语做**无提示填空题**，要求：
+   - 空内只填写介词
+   - 使用**来源于外刊的真实地道复杂句式**
+   - 句子要地道、符合上海高二英语进阶难度要求
+   - 每个题目只留一个空，就是介词位置
+   - 句子长度控制在18-35个单词（要有足够复杂度，不能太短太简单）
+   - 使用 ______ 表示填空位置
+   - 句子必须包含合理的上下文语境，考查介词的地道用法
+3. 题目单独排版，后面附上答案和详细解析（说明这个介词短语的用法、搭配规则）
+4. 最后，为挑选出来的所有难词制作一份**词汇测试表格**：
+   - 题目版表格：第一列英文单词，第二列词性，第三列留空给学生填写中文释义
+   - 答案版表格：第一列英文单词，第二列词性，第三列中文释义
+5. 输出题目时，不要添加小题编号，也不要添加中文大标题。
+
+【重要】必须返回标准JSON格式，结构如下：
+{
+  "difficult_words": [
+    {"word": "example", "pos": "n.", "meaning": "例子", "is_difficult": true}
+  ],
+  "questions": [
+    {
+      "question": "The book has been translated ______ more than 50 languages around the world.",
+      "answer": "into",
+      "explanation": "translate into 固定搭配，表示翻译成某种语言"
+    }
+  ],
+  "vocab_table_question": "表格的纯文本版本（题目版，用换行分隔每行，制表符分隔三列）",
+  "vocab_table_answer": "表格的纯文本版本（答案版，用换行分隔每行，制表符分隔三列）",
+  "full_questions_text": "完整题目的纯文本（每个题目一行，不含编号和大标题）",
+  "full_answers_text": "完整答案解析的纯文本"
+}
+
+只返回JSON，不要任何其他文字。确保所有字段完整。`;
+
+            const cleanApiKey = apiKey.replace(/[^\x00-\x7F]/g, '').trim();
+            const response = await fetch('https://ark.cn-beijing.volces.com/api/v3/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${cleanApiKey}`
+                },
+                body: JSON.stringify({
+                    model: document.getElementById('llmModel').value,
+                    messages: [
+                        { role: 'system', content: '你是一位经验丰富的上海高中英语教师，擅长根据学生水平挑选难度合适的词汇和出题。你熟悉COCA词频和vocabulary.com难度分级。' },
+                        { role: 'user', content: prompt }
+                    ],
+                    temperature: 0.6
+                })
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error?.message || 'API 请求失败');
+            }
+
+            const data = await response.json();
+            const content = data.choices[0].message.content;
+            
+            let result = null;
+            let parseError = null;
+            
+            try {
+                const match = content.match(/\{[\s\S]*\}/);
+                if (match) {
+                    result = JSON.parse(match[0]);
+                }
+            } catch (err) {
+                parseError = err.message;
+                console.warn('JSON 解析失败，尝试容错处理:', err);
+                
+                try {
+                    let fixedContent = content.replace(/,\s*([}\]])/g, '$1');
+                    const match = fixedContent.match(/\{[\s\S]*\}/);
+                    if (match) {
+                        result = JSON.parse(match[0]);
+                    }
+                } catch (err2) {
+                    console.error('容错解析也失败');
+                }
+            }
+            
+            if (result) {
+                return result;
+            }
+            
+            throw new Error(`无法解析数据。原始错误: ${parseError || '未知错误'}`);
+        }
+
+        function renderResult(data) {
+            // 渲染题目（去除编号和大标题，每个题目单独一行）
+            let questionsText = data.full_questions_text || '';
+            if (!questionsText) {
+                data.questions.forEach(q => {
+                    questionsText += q.question + '\n\n';
+                });
+            }
+            document.getElementById('questionsText').value = questionsText.trim();
+
+            // 渲染答案解析
+            let answersText = data.full_answers_text || '';
+            if (!answersText) {
+                data.questions.forEach((q, i) => {
+                    answersText += q.question + '\n';
+                    answersText += `答案：${q.answer}\n`;
+                    answersText += `解析：${q.explanation}\n\n`;
+                });
+            }
+            document.getElementById('answersText').value = answersText.trim();
+
+            // 渲染词汇表格
+            document.getElementById('vocabTableText').value = 
+                (data.vocab_table_answer || '') + '\n\n--- 题目版 ---\n\n' + (data.vocab_table_question || '');
+        }
+
+        function updateStep(step) {
+            document.querySelectorAll('.step').forEach((el, i) => {
+                el.classList.remove('active', 'completed');
+                if (i + 1 < step) el.classList.add('completed');
+                else if (i + 1 === step) el.classList.add('active');
+            });
+        }
+
+        function showLoading(text) {
+            loadingText.textContent = text;
+            loading.style.display = 'block';
+        }
+
+        function hideLoading() {
+            loading.style.display = 'none';
+        }
+
+        function showError(id, msg) {
+            const el = document.getElementById(id);
+            el.textContent = msg;
+            el.style.display = 'block';
+        }
+
+        function hideError(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        function showSuccess(id, msg) {
+            const el = document.getElementById(id);
+            el.textContent = msg;
+            el.style.display = 'block';
+        }
+
+        function hideSuccess(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 创建表格单元格
+        function createCell(text, isHeader = false) {
+            return new TableCell({
+                children: [new Paragraph({
+                    children: [new TextRun({
+                        text: text || '',
+                        bold: isHeader,
+                        size: 20
+                    })]
+                })],
+                width: new Width(3333, "pct")
+            });
+        }
+
+        // 创建并下载 Word 文件
+        function downloadWord(data) {
+            const children = [];
+            
+            // 标题
+            children.push(new Paragraph({
+                heading: HeadingLevel.HEADING_1,
+                children: [new TextRun({ text: "英语词汇练习题", bold: true, size: 28 })],
+                spacing: { after: 300 }
+            }));
+
+            // 第一部分：介词填空题
+            if (data.questions && data.questions.length > 0) {
+                children.push(new Paragraph({
+                    heading: HeadingLevel.HEADING_2,
+                    children: [new TextRun({ text: "介词填空", size: 24 })],
+                    spacing: { after: 200 }
+                }));
+                
+                data.questions.forEach(q => {
+                    children.push(new Paragraph({
+                        children: [new TextRun({ text: q.question, size: 22 })],
+                        spacing: { after: 100, line: 360 }
+                    }));
+                });
+                children.push(new Paragraph({ spacing: { after: 400 } }));
+            }
+
+            // 第二部分：词汇测试表格 - 题目版
+            if (data.difficult_words && data.difficult_words.length > 0) {
+                children.push(new Paragraph({
+                    heading: HeadingLevel.HEADING_2,
+                    children: [new TextRun({ text: "词汇测试（题目版）", size: 24 })],
+                    spacing: { after: 200 }
+                }));
+
+                const questionRows = [
+                    new TableRow({
+                        children: [
+                            createCell("英文", true),
+                            createCell("词性", true),
+                            createCell("中文释义", true)
+                        ]
+                    })
+                ];
+
+                data.difficult_words.forEach(word => {
+                    questionRows.push(new TableRow({
+                        children: [
+                            createCell(word.word),
+                            createCell(word.pos || ''),
+                            createCell('')
+                        ]
+                    }));
+                });
+
+                children.push(new Table({
+                    width: { size: 100, type: "pct" },
+                    rows: questionRows
+                }));
+                children.push(new Paragraph({ spacing: { after: 400 } }));
+
+                // 第三部分：答案解析
+                if (data.questions && data.questions.length > 0) {
+                    children.push(new Paragraph({
+                        heading: HeadingLevel.HEADING_2,
+                        children: [new TextRun({ text: "答案与解析", size: 24 })],
+                        spacing: { after: 200 }
+                    }));
+                    
+                    data.questions.forEach((q, i) => {
+                        children.push(new Paragraph({
+                            children: [
+                                new TextRun({ text: (i+1) + ". ", size: 22 }),
+                                new TextRun({ text: q.question + " = ", size: 22 }),
+                                new TextRun({ text: q.answer, bold: true, size: 22 })
+                            ],
+                            spacing: { after: 50 }
+                        }));
+                        if (q.explanation) {
+                            children.push(new Paragraph({
+                                children: [new TextRun({ text: "   解析：" + q.explanation, size: 20 })],
+                                spacing: { after: 100 }
+                            }));
+                        }
+                    });
+                    children.push(new Paragraph({ spacing: { after: 400 } }));
+                }
+
+                // 第四部分：词汇测试表格 - 答案版
+                children.push(new Paragraph({
+                    heading: HeadingLevel.HEADING_2,
+                    children: [new TextRun({ text: "词汇测试（答案版）", size: 24 })],
+                    spacing: { after: 200 }
+                }));
+
+                const answerRows = [
+                    new TableRow({
+                        children: [
+                            createCell("英文", true),
+                            createCell("词性", true),
+                            createCell("中文释义", true)
+                        ]
+                    })
+                ];
+
+                data.difficult_words.forEach(word => {
+                    answerRows.push(new TableRow({
+                        children: [
+                            createCell(word.word),
+                            createCell(word.pos || ''),
+                            createCell(word.meaning || '')
+                        ]
+                    }));
+                });
+
+                children.push(new Table({
+                    width: { size: 100, type: "pct" },
+                    rows: answerRows
+                }));
+            }
+
+            const doc = new Document({
+                sections: [{
+                    properties: {},
+                    children: children
+                }]
+            });
+
+            Packer.toBlob(doc).then(blob => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'VocabQuiz-' + new Date().toISOString().slice(0,10) + '.docx';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                alert('Word 文件已下载！');
+            });
+        }
+    </script>
+</body>
+</html>
